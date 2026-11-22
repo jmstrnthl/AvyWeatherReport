@@ -14,11 +14,11 @@ Forecast sections (scraped; the first two are shared by both reports):
   * University of Utah GEFS downscaled ensemble plume (Alta-Collins / PCMR Summit)
 
 History sections:
-  * Alta only - NCEI: the station is found with the HOMR API
-    (https://www.ncei.noaa.gov/access/homr/api) and its daily data comes from the NCEI
-    Access Data Service. HOMR holds station *metadata* only. The one NCEI station at
-    Alta is the ALTA co-op station (GHCND:USC00420072): daily max/min temperature,
-    precipitation and snow, no wind.
+  * NCEI co-op station (Alta: ALTA, GHCND:USC00420072; Park City: PARK CITY,
+    GHCND:USC00426644): the station is looked up with the HOMR API
+    (https://www.ncei.noaa.gov/access/homr/api, station *metadata* only) and its daily
+    data comes from the NCEI Access Data Service: max/min temperature, new snow and
+    snow depth (no wind). NCEI data lag days to a couple of weeks.
   * Mesonet stations (Alta: ALTA - BASE, COLLINS, TOP OF COLLINS, MOUNT BALDY,
     LCC - CARDIFF PEAK; Park City: DV - BURNS, DV - EMPIRE PEAK): 30-day daily
     temperature, wind speed and wind direction candlesticks, plus the last 24 hours of
@@ -119,7 +119,7 @@ class Site:
     plume_name: str
     stations: list[tuple]       # (display name, elevation ft, station ID) for history
     history_label: str
-    include_ncei: bool = False  # NCEI/HOMR ALTA co-op page
+    ncei_ghcnd: str | None = None  # NCEI co-op station (GHCN-Daily ID) for the NCEI page
 
 
 SITES = {
@@ -134,7 +134,7 @@ SITES = {
                   ("ALTA - TOP OF COLLINS", 10443, "ALT"),
                   ("ALTA - MOUNT BALDY", 11066, "AMB"),
                   ("LCC - CARDIFF PEAK", 10059, "IFF")],
-        history_label="Alta stations", include_ncei=True),
+        history_label="Alta stations", ncei_ghcnd="USC00420072"),   # ALTA co-op
     "pc": Site(
         key="pc", title="Park City & Deer Valley", file_prefix="pc_weather_report",
         points=[Point("PC Base", 6697, 40.6461, -111.498),
@@ -142,7 +142,8 @@ SITES = {
         plume_station="PKC", plume_name="PCMR Summit",
         stations=[("DV - BURNS", 7333, "DVE"),
                   ("DV - EMPIRE PEAK", 9570, "EMPUT")],
-        history_label="Park City / Deer Valley stations"),
+        history_label="Park City / Deer Valley stations",
+        ncei_ghcnd="USC00426644"),   # PARK CITY co-op, 6,900 ft
 }
 
 PAGE = (8.5, 11)  # portrait letter
@@ -422,11 +423,20 @@ def point_forecast_section(rep: Report, pt: Point, section: str):
 
 
 def forecast_charts_page(rep: Report, fc: pd.DataFrame, title: str, where: str, section: str):
-    fig, axes = plt.subplots(4, 1, figsize=PAGE, sharex=True,
-                             gridspec_kw=dict(height_ratios=[3, 2.4, 1.6, 2], hspace=0.2,
-                                              left=0.09, right=0.95, top=0.905, bottom=0.315))
+    # left column: the whole 7-day forecast; right column: the next 24 hours in detail
+    fig = plt.figure(figsize=PAGE)
+    gs = fig.add_gridspec(4, 2, width_ratios=[1.85, 1], height_ratios=[3, 2.4, 1.6, 2],
+                          hspace=0.22, wspace=0.13, left=0.075, right=0.975, top=0.89,
+                          bottom=0.315)
+    axes = [fig.add_subplot(gs[0, 0])]
+    axes += [fig.add_subplot(gs[i, 0], sharex=axes[0]) for i in range(1, 4)]
+    right = [fig.add_subplot(gs[0, 1])]
+    right += [fig.add_subplot(gs[i, 1], sharex=right[0]) for i in range(1, 4)]
     header(fig, title,
            f"{where}  ·  {fc.index[0]:%a %b %d %H:%M} – {fc.index[-1]:%a %b %d %H:%M %Z}")
+    fig.text(0.075, 0.905, "7-day forecast", fontsize=9.5, weight="bold", va="bottom")
+    fig.text(0.685, 0.905, "Next 24 hours", fontsize=9.5, weight="bold", va="bottom")
+    next24_charts(right, fc.iloc[:24])
     ax = axes[0]
     ax.plot(fc.index, fc.temp, color=C_WARM, lw=1.8, label="Temperature")
     ax.plot(fc.index, fc.dewpt, color="#3a7d44", lw=1.1, label="Dew point")
@@ -441,14 +451,14 @@ def forecast_charts_page(rep: Report, fc: pd.DataFrame, title: str, where: str, 
         ax.scatter(fc.index, fc.gust, color=C_GUST, marker="^", s=14, zorder=3)
     ymax = np.nanmax([fc.wind.max(), fc.gust.max() if has_gust else 0]) * 1.45 + 3
     ax.set_ylim(0, ymax)
-    step = max(1, len(fc) // 40)
+    step = max(1, len(fc) // 28)
     for t, d in zip(fc.index[::step], fc.wdir[::step]):
         if isinstance(d, str) and d:
-            ax.text(t, ymax * 0.97, d, fontsize=5.5, ha="center", va="top", color=C_MUTED,
+            ax.text(t, ymax * 0.97, d, fontsize=5.2, ha="center", va="top", color=C_MUTED,
                     rotation=90)
     ax.set_ylabel("mph")
-    ax.set_title("Sustained wind (line)" + (", gusts (▲)" if has_gust else ", no gusts forecast")
-                 + ", direction (labels along top)", loc="left", fontsize=8, color=C_MUTED)
+    ax.set_title("Wind (line)" + (", gusts (▲)" if has_gust else ", no gusts forecast")
+                 + ", direction (top)", loc="left", fontsize=7.5, color=C_MUTED)
 
     ax = axes[2]
     ax.bar(fc.index, fc["pop"], width=1 / 24, color=C_COOL, alpha=0.75, label="Precip. potential")
@@ -463,10 +473,79 @@ def forecast_charts_page(rep: Report, fc: pd.DataFrame, title: str, where: str, 
     ax.xaxis.set_major_locator(mdates.DayLocator(tz=TZ))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%a\n%b %d", tz=TZ))
     ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=[6, 12, 18], tz=TZ))
+    ax.tick_params(axis="x", labelsize=7.5)
     for a in axes:
         a.grid(True, which="major", axis="x", color="#bbbbbb")
+    for a in axes[:-1]:
+        plt.setp(a.get_xticklabels(), visible=False)
     draw_daily_summary(fig, fc, top=0.255)
     rep.save(fig, section)
+
+
+def next24_charts(axes, fc: pd.DataFrame):
+    """Hour-by-hour detail for the first 24 forecast hours: temperature, wind/gusts with
+    direction, precipitation potential and sky cover, with values printed on the bars
+    and points."""
+    t = fc.index
+    lbl = dict(fontsize=5.3, ha="center", color=C_TEXT)
+
+    ax = axes[0]  # temperature (+ wind chill)
+    ax.plot(t, fc.temp, color=C_WARM, lw=1.6, marker="o", ms=2.4, label="Temp")
+    if fc.chill.notna().any():
+        ax.plot(t, fc.chill, color=C_COOL, lw=1, ls="--", label="Wind chill")
+    ax.axhline(32, color="#999999", lw=0.8, ls=":")
+    lo = np.nanmin([fc.temp.min(), fc.chill.min()])
+    hi = fc.temp.max()
+    ax.set_ylim(lo - 3, hi + (hi - lo) * 0.35 + 4)
+    for x, v in zip(t[::2], fc.temp[::2]):
+        if np.isfinite(v):
+            ax.text(x, v + 1, f"{v:.0f}", va="bottom", **lbl)
+    ax.legend(loc="upper left", fontsize=6.5, frameon=False, ncol=2)
+
+    ax = axes[1]  # wind, gusts, direction
+    ax.plot(t, fc.wind, color=C_MEAN, lw=1.5, marker="o", ms=2.2)
+    has_gust = fc.gust.notna().any()
+    if has_gust:
+        ax.scatter(t, fc.gust, color=C_GUST, marker="^", s=12, zorder=3)
+    ymax = np.nanmax([fc.wind.max(), fc.gust.max() if has_gust else 0, 4]) * 1.6 + 2
+    ax.set_ylim(0, ymax)
+    for x, v, d in zip(t[::2], fc.wind[::2], fc.wdir[::2]):
+        if np.isfinite(v):
+            ax.text(x, v + ymax * 0.04, f"{v:.0f}", va="bottom", **lbl)
+        if isinstance(d, str) and d:
+            ax.text(x, ymax * 0.97, d, fontsize=4.8, ha="center", va="top", color=C_MUTED,
+                    rotation=90)
+    ax.set_title("mph" + (", gusts ▲" if has_gust else ""), loc="left", fontsize=7,
+                 color=C_MUTED)
+
+    ax = axes[2]  # precipitation potential
+    ax.bar(t, fc["pop"], width=0.8 / 24, color=C_COOL, alpha=0.8)
+    for x, v in zip(t, fc["pop"]):
+        if np.isfinite(v) and v > 0:
+            ax.text(x, v + 3, f"{v:.0f}", va="bottom", **lbl)
+    ax.set_ylim(0, 115)
+    ax.set_yticks([0, 50, 100])
+    ax.set_title("Precip. potential %", loc="left", fontsize=7, color=C_MUTED)
+
+    ax = axes[3]  # sky cover
+    ax.bar(t, fc.sky, width=0.8 / 24, color="#9aa5b1", alpha=0.7)
+    for x, v in zip(t[::2], fc.sky[::2]):
+        if np.isfinite(v):
+            ax.text(x, v + 3, f"{v:.0f}", va="bottom", **lbl)
+    ax.set_ylim(0, 115)
+    ax.set_yticks([0, 50, 100])
+    ax.set_title("Sky cover %", loc="left", fontsize=7, color=C_MUTED)
+
+    ax.xaxis.set_major_locator(mdates.HourLocator(byhour=range(0, 24, 3), tz=TZ))
+    ax.xaxis.set_minor_locator(mdates.HourLocator(tz=TZ))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H", tz=TZ))
+    ax.set_xlim(t[0] - pd.Timedelta(minutes=40), t[-1] + pd.Timedelta(minutes=40))
+    ax.set_xlabel(f"hour ({t[0]:%Z}), starting {t[0]:%a %H:%M}", fontsize=7)
+    for a in axes:
+        a.tick_params(axis="both", labelsize=6.5)
+        a.grid(True, which="major", axis="x", color="#bbbbbb")
+    for a in axes[:-1]:
+        plt.setp(a.get_xticklabels(), visible=False)
 
 
 PRECIP_COLS = [("rain", "Rain"), ("snow", "Snow"), ("thunder", "Thunder"),
@@ -682,21 +761,19 @@ def direction_chart(ax, daily: pd.DataFrame, title: str, width=0.62):
 
 
 # --------------------------------------------------------------------------- history: NCEI / HOMR
-def ncei_section(rep: Report, days: int):
-    # 1) find the station with the HOMR API
-    homr = get(HOMR_SEARCH, params={"name": "ALTA", "state": "UT"}).json()
-    stations = homr["stationCollection"]["stations"]
-    ghcnd, name, elev = None, "ALTA", None
-    for st in stations:
-        ids = {i["idType"]: i["id"] for i in st.get("identifiers", [])}
-        if "GHCND" in ids and st.get("header", {}).get("por", {}).get("endDate") == "Present":
-            ghcnd = ids["GHCND"]
-            name = st.get("header", {}).get("preferredName", name)
-            for loc in st.get("location", {}).get("elevations", []) if isinstance(st.get("location"), dict) else []:
-                elev = loc.get("elevations", [{}])[0].get("elevation") if isinstance(loc, dict) else None
-            break
-    if not ghcnd:
-        raise RuntimeError("HOMR returned no active GHCN-Daily station named ALTA, UT")
+def ncei_section(rep: Report, days: int, ghcnd: str):
+    # 1) look the station up with the HOMR API (name, elevation, still active?)
+    homr = get(HOMR_SEARCH, params={"qid": f"GHCND:{ghcnd}"}).json()
+    stations = homr.get("stationCollection", {}).get("stations", [])
+    if not stations:
+        raise RuntimeError(f"HOMR has no station GHCND:{ghcnd}")
+    st = stations[0]
+    name = st.get("header", {}).get("preferredName", ghcnd)
+    elev = next((e.get("elevationFeet") for e in st.get("location", {}).get("elevations", [])
+                 if e.get("elevationFeet")), None)
+    if st.get("header", {}).get("por", {}).get("endDate") != "Present":
+        print(f"  note: HOMR lists {ghcnd} as no longer active", file=sys.stderr)
+    name_elev = f"{name} ({int(float(elev)):,} ft)" if elev else name
 
     # 2) daily data from the NCEI Access Data Service
     end = dt.datetime.now(TZ).date()
@@ -717,9 +794,9 @@ def ncei_section(rep: Report, days: int):
     fig, (a1, a2) = plt.subplots(2, 1, figsize=LAND, sharex=True,
                                  gridspec_kw=dict(height_ratios=[3, 2], hspace=0.15,
                                                   left=0.07, right=0.96, top=0.86, bottom=0.08))
-    header(fig, f"{name} — NCEI daily observations, last {days} days",
-           f"Station {ghcnd} (found via the HOMR API)  ·  data from the NCEI Access Data Service  ·  "
-           f"NCEI data usually lag a few days")
+    header(fig, f"{name_elev} — NCEI daily observations, last {days} days",
+           f"Station {ghcnd} (looked up with the HOMR API)  ·  data from the NCEI Access Data "
+           f"Service  ·  NCEI data usually lag a few days to a couple of weeks")
     candlestick_temp(a1, daily, "Daily temperature (high/low)")
     a2.bar(df.index, df.SNOW, color=C_COOL, width=0.62, label="New snow (in)")
     a2.set_ylabel("in"); a2.set_title("Snowfall and snow depth", loc="left", fontsize=10, weight="bold")
@@ -730,10 +807,16 @@ def ncei_section(rep: Report, days: int):
         h1, l1 = a2.get_legend_handles_labels(); h2, l2 = a3.get_legend_handles_labels()
         a2.legend(h1 + h2, l1 + l2, loc="upper left", fontsize=7, frameon=False)
     date_axis(a2)
-    last = df.dropna(subset=["TMAX", "TMIN"], how="all").index.max()
-    if pd.notna(last):
-        fig.text(0.96, 0.89, f"latest NCEI day: {last:%b %d}", ha="right", fontsize=8, color=C_MUTED)
-    rep.save(fig, "History: NCEI ALTA co-op station")
+    if not (df.SNOW.notna().any() or df.SNWD.notna().any()):
+        a2.text(0.5, 0.5, "No snowfall or snow depth reported to NCEI yet for this window",
+                transform=a2.transAxes, ha="center", va="center", fontsize=9, color=C_MUTED)
+    parts = []
+    for label, cols in (("temperature", ["TMAX", "TMIN"]), ("snow", ["SNOW", "SNWD"])):
+        last = df.dropna(subset=cols, how="all").index.max()
+        parts.append(f"{label} {last:%b %d}" if pd.notna(last) else f"{label} none")
+    fig.text(0.96, 0.89, "latest NCEI day: " + ", ".join(parts), ha="right", fontsize=8,
+             color=C_MUTED)
+    rep.save(fig, f"History: NCEI {name.split(',')[0].title()} co-op station")
 
 
 # --------------------------------------------------------------------------- history: Synoptic
@@ -1201,7 +1284,7 @@ def title_page(rep: Report, site: Site, days: int, statuses: list[tuple[str, str
     ids = "|".join(sid for _, _, sid in site.stations)
     srcs = ([UAC_URL, AFD_URL] + [p.url for p in site.points]
             + [f"{PLUME_PAGE}?t=ensgefsds&d=PL&r={site.plume_station}"]
-            + (["https://www.ncei.noaa.gov/access/homr/api"] if site.include_ncei else [])
+            + (["https://www.ncei.noaa.gov/access/homr/api"] if site.ncei_ghcnd else [])
             + [f"{WRH_TIMESERIES}?site={ids}&hourly=true&hours=720",
                "https://api.synopticdata.com/v2 (fallback)",
                "https://api.weather.gov (station observations, fallback)"])
@@ -1224,8 +1307,9 @@ def build_report(site: Site, args, overrides: dict[str, str], now: dt.datetime, 
                              r, pt, f"NWS forecast: {pt.label} ({pt.elev:,} ft)")))
     sections.append(("Ensemble plumes (U of U)",
                      lambda r: plume_section(r, site.plume_station, site.plume_name)))
-    if site.include_ncei:
-        sections.append(("History: NCEI / HOMR", lambda r: ncei_section(r, args.days)))
+    if site.ncei_ghcnd:
+        sections.append(("History: NCEI / HOMR",
+                         lambda r: ncei_section(r, args.days, site.ncei_ghcnd)))
     sections.append((f"History: {site.history_label}",
                      lambda r: station_section(r, site, args.synoptic_token, args.days, overrides)))
 

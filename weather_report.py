@@ -63,12 +63,15 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.dates as mdates
+import matplotlib.patheffects as patheffects
 import matplotlib.pyplot as plt
+import matplotlib.transforms as mtransforms
 import numpy as np
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.colors import LinearSegmentedColormap, Normalize
 from PIL import Image
 
 # --------------------------------------------------------------------------- config
@@ -482,6 +485,27 @@ def forecast_charts_page(rep: Report, fc: pd.DataFrame, title: str, where: str, 
     rep.save(fig, section)
 
 
+def mark_steepest_rise(ax, temp: pd.Series):
+    """Highlight the largest rise between two consecutive forecast hours: a shaded hour,
+    a thick segment over the line, ringed end points and a "+N°F" label at the top of
+    the shaded hour. Ties mark the first one; nothing is marked if it never warms."""
+    rise = temp.diff()
+    if not (rise > 0).any():
+        return
+    i = int(np.nanargmax(rise.to_numpy()))
+    t0, t1 = temp.index[i - 1], temp.index[i]
+    v0, v1 = temp.iloc[i - 1], temp.iloc[i]
+    ax.axvspan(t0, t1, color="#ec8600", alpha=0.15, lw=0, zorder=1)
+    ax.plot([t0, t1], [v0, v1], color="#d74700", lw=3, solid_capstyle="round", zorder=4)
+    ax.scatter([t0, t1], [v0, v1], s=18, facecolor="white", edgecolor="#d74700", lw=1.2, zorder=5)
+    # top of the shaded hour, or a little lower if the legend sits up there
+    y = 0.72 if i < len(temp) / 2 else 0.965  # legend occupies the top-left half
+    ax.text(t0 + (t1 - t0) / 2, y, f"+{v1 - v0:.0f}°F",
+            transform=mtransforms.blended_transform_factory(ax.transData, ax.transAxes),
+            ha="center", va="top", fontsize=6.5, color="#b83c00", weight="bold", zorder=6,
+            path_effects=[patheffects.withStroke(linewidth=2.2, foreground="#fdebd8")])
+
+
 def next24_charts(axes, fc: pd.DataFrame):
     """Hour-by-hour detail for the first 24 forecast hours: temperature, wind/gusts with
     direction, precipitation potential and sky cover, with values printed on the bars
@@ -501,6 +525,7 @@ def next24_charts(axes, fc: pd.DataFrame):
         if np.isfinite(v):
             ax.text(x, v + 1, f"{v:.0f}", va="bottom", **lbl)
     ax.legend(loc="upper left", fontsize=6.5, frameon=False, ncol=2)
+    mark_steepest_rise(ax, fc.temp)
 
     ax = axes[1]  # wind, gusts, direction
     ax.plot(t, fc.wind, color=C_MEAN, lw=1.5, marker="o", ms=2.2)
@@ -644,20 +669,52 @@ def plume_section(rep: Report, station: str, name: str):
 
 
 # --------------------------------------------------------------------------- history: charts
-def candlestick_temp(ax, daily: pd.DataFrame, title: str):
-    """daily needs columns high, low and optionally open, close."""
+# Box color on the station temperature charts: the day's steepest warming between
+# consecutive 2-hour mean temperatures. Blue = slow, orange/red-orange = fast. Fixed
+# scale so a color means the same rate on every page; 8 °F+ shows as the top color.
+WARMING_CMAP = LinearSegmentedColormap.from_list("warming", [
+    "#009cc1", "#2bb0c9", "#5fc3d0", "#8ad0c3", "#b1d3a6", "#cbc276", "#daa237", "#ec8600",
+    "#d74700"])
+WARMING_NORM = Normalize(vmin=0, vmax=8, clip=True)
+WARMING_ALPHA = 0.75
+C_WHISKER = "#3a3a3a"
+_HALO = [patheffects.Stroke(linewidth=4, foreground="white"), patheffects.Normal()]
+
+
+def steepest_warming(temp: pd.Series) -> pd.Series:
+    """Per local calendar day: the largest rise between consecutive 2-hour mean
+    temperatures (°F), 0 if the day only cooled. Binned on local clock time so the
+    windows stay 00-02, 02-04, ... across daylight-saving changes."""
+    s = temp.dropna()
+    if s.empty:
+        return pd.Series(dtype=float)
+    s.index = s.index.tz_convert(TZ).tz_localize(None)
+    step = s.resample("2h", origin="start_day").mean().diff().dropna()
+    return step.groupby(step.index.normalize()).max().clip(lower=0)
+
+
+def candlestick_temp(ax, daily: pd.DataFrame, title: str, width: float = 0.62):
+    """Daily temperature. With hourly-derived columns (q1, q3, mean, steep) each day is a
+    box-and-whisker: box = 25th-75th percentile, whiskers = low/high, dash = mean, box
+    color = steepest 2-hour warming that day. With only high/low (NCEI daily data) each
+    day is a plain high-low bar."""
     x = mdates.date2num(pd.to_datetime(daily.index))
-    has_oc = {"open", "close"} <= set(daily.columns) and daily[["open", "close"]].notna().any().any()
+    has_box = ({"q1", "q3", "mean"} <= set(daily.columns)
+               and daily[["q1", "q3"]].notna().any().any())
     for xi, row in zip(x, daily.itertuples()):
         if np.isnan(row.high) or np.isnan(row.low):
             continue
-        if has_oc and not (np.isnan(row.open) or np.isnan(row.close)):
-            up = row.close >= row.open
-            color = C_WARM if up else C_COOL
-            lo, hi = sorted([row.open, row.close])
-            ax.vlines(xi, row.low, row.high, color=color, lw=1.1, zorder=2)
-            ax.bar(xi, max(hi - lo, 0.4), bottom=lo, width=0.62, color=color,
-                   edgecolor=color, zorder=3)
+        if has_box and not np.isnan(row.q1):
+            steep = getattr(row, "steep", np.nan)
+            color = WARMING_CMAP(WARMING_NORM(0 if np.isnan(steep) else steep))
+            ax.vlines(xi, row.low, row.q1, color=C_WHISKER, lw=1.0, zorder=2)
+            ax.vlines(xi, row.q3, row.high, color=C_WHISKER, lw=1.0, zorder=2)
+            ax.hlines([row.low, row.high], xi - width * 0.22, xi + width * 0.22,
+                      color=C_WHISKER, lw=1.0, zorder=2)  # whisker caps
+            ax.bar(xi, max(row.q3 - row.q1, 0.3), bottom=row.q1, width=width, color=color,
+                   alpha=WARMING_ALPHA, edgecolor=C_WHISKER, lw=0.6, zorder=3)
+            ax.hlines(row.mean, xi - width * 0.62, xi + width * 0.62, color=C_MEAN, lw=2.0,
+                      zorder=4, path_effects=_HALO)
         else:
             ax.bar(xi, row.high - row.low, bottom=row.low, width=0.62, color=C_WARM,
                    alpha=0.8, zorder=3)
@@ -670,12 +727,20 @@ def candlestick_temp(ax, daily: pd.DataFrame, title: str):
     ax.set_title(title, loc="left", fontsize=10, weight="bold")
     lo, hi = np.nanmin(daily.low), np.nanmax(daily.high)
     if np.isfinite(lo) and np.isfinite(hi):
-        ax.set_ylim(lo - 6, hi + 6)
-    if has_oc:
-        from matplotlib.patches import Patch
-        ax.legend(handles=[Patch(color=C_WARM, label="Warmed (midnight→midnight)"),
-                           Patch(color=C_COOL, label="Cooled (midnight→midnight)")],
-                  loc="upper left", fontsize=7, frameon=False, ncol=2)
+        ax.set_ylim(lo - 6, hi + (6 + 0.18 * (hi - lo) if has_box else 6))  # room for legend
+    if has_box:
+        # color key: small horizontal color bar in the top-left, mean-dash key beside it
+        cax = ax.inset_axes([0.012, 0.9, 0.2, 0.035])
+        cb = ax.figure.colorbar(plt.cm.ScalarMappable(norm=WARMING_NORM, cmap=WARMING_CMAP),
+                                cax=cax, orientation="horizontal", alpha=WARMING_ALPHA)
+        cb.set_ticks([0, 2, 4, 6, 8], labels=["0", "2", "4", "6", "8+"])
+        cb.ax.tick_params(labelsize=6, length=2, pad=1)
+        cb.outline.set_linewidth(0.4)
+        ax.text(0.218, 0.918, "steepest 2-h warming (°F)", transform=ax.transAxes,
+                fontsize=6.5, va="center", color=C_TEXT)
+        from matplotlib.lines import Line2D
+        ax.legend(handles=[Line2D([], [], color=C_MEAN, lw=2.0, label="Daily mean")],
+                  loc="upper left", bbox_to_anchor=(0.5, 1.0), fontsize=7, frameon=False)
 
 
 def date_axis(ax):
@@ -889,10 +954,10 @@ def daily_stats(df: pd.DataFrame, days: int) -> tuple[pd.DataFrame, pd.DataFrame
     day = day[day.isin(keep)]
     g = df.groupby(day)
     t = pd.DataFrame({
-        "high": g.temp.max(), "low": g.temp.min(),
-        "open": g.temp.apply(lambda s: s.dropna().iloc[0] if s.notna().any() else np.nan),
-        "close": g.temp.apply(lambda s: s.dropna().iloc[-1] if s.notna().any() else np.nan),
+        "high": g.temp.max(), "low": g.temp.min(), "mean": g.temp.mean(),
+        "q1": g.temp.quantile(0.25), "q3": g.temp.quantile(0.75),
     })
+    t["steep"] = steepest_warming(df["temp"]).reindex(t.index)  # box color
     w = pd.DataFrame({
         "mean": g.wind.mean(), "min": g.wind.min(), "max": g.wind.max(),
         "q1": g.wind.quantile(0.25), "q3": g.wind.quantile(0.75),
@@ -1240,7 +1305,8 @@ def station_section(rep: Report, site: Site, token: str | None, days: int,
         if have < days:
             fig.text(0.975, 0.89, "Older days come from saved earlier runs (data/ folder) when "
                                   "a source has less history", ha="right", fontsize=7.5, color=C_WARM)
-        candlestick_temp(a1, t, "Daily temperature — wick: high/low, body: midnight→midnight change")
+        candlestick_temp(a1, t, "Daily temperature — box: 25th–75th pct, whiskers: low/high, "
+                                "color: steepest 2-h warming")
         wind_chart(a2, w, "Daily wind speed")
         direction_chart(a3, wd, "Daily wind direction")
         date_axis(a3)

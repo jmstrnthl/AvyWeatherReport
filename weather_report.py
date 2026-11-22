@@ -770,11 +770,15 @@ def synoptic_timeseries(token: str, stids: list[str], days: int) -> dict[str, pd
 
 
 def merge_cache(stid: str, fresh: pd.DataFrame) -> pd.DataFrame:
-    """The free Synoptic plan only serves the last 7 days, so every run saves what it
-    gets to data/synoptic_<STID>.csv and merges it with earlier runs. Running the
-    report at least once a week builds up the full history window over time."""
+    """Every run saves the observations it gets to data/obs_<STID>.csv and merges them
+    with earlier runs, so a source with less history than the report window (Synoptic's
+    free plan, the NWS API) still builds up the full window over time. The `src`
+    column records where each reading came from."""
     os.makedirs(CACHE_DIR, exist_ok=True)
-    path = os.path.join(CACHE_DIR, f"synoptic_{stid}.csv")
+    path = os.path.join(CACHE_DIR, f"obs_{stid}.csv")
+    legacy = os.path.join(CACHE_DIR, f"synoptic_{stid}.csv")  # name used before Nov 2026
+    if not os.path.exists(path) and os.path.exists(legacy):
+        os.replace(legacy, path)
     frames = [fresh]
     if os.path.exists(path):
         old = pd.read_csv(path, index_col=0)

@@ -1,4 +1,4 @@
-# Builds the Alta and Park City reports every morning on GitHub's servers and emails
+# Builds the Alta and Park City reports twice a day on GitHub's servers and emails
 # them. Needs these repository secrets (Settings > Secrets and variables > Actions):
 #   EMAIL_TO        where to send the reports (comma-separated for several)
 #   SMTP_USER       sending account, e.g. a Gmail address
@@ -9,9 +9,10 @@ name: Daily weather report
 
 on:
   schedule:
-    # GitHub cron is UTC: 14:30 UTC = 7:30 AM MST (ski season) / 8:30 AM MDT.
+    # GitHub cron is UTC. Times below are MST (ski season); add an hour under MDT.
     # Scheduled runs can start a few minutes (occasionally much) late.
-    - cron: "30 14 * * *"
+    - cron: "30 14 * * *" # 7:30 AM MST
+    - cron: "30 2 * * *"  # 7:30 PM MST (02:30 UTC the next day)
   workflow_dispatch: # "Run workflow" button for a manual run
 
 permissions:

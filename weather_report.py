@@ -50,6 +50,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import io
+import json
 import os
 import re
 import shutil
@@ -70,7 +71,7 @@ import numpy as np
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.backends.backend_pdf import PdfFile, PdfPages, RendererPdf
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from PIL import Image
 
@@ -213,39 +214,104 @@ def header(fig, title: str, subtitle: str = ""):
         fig.text(0.06, 0.937, subtitle, fontsize=8.5, color=C_MUTED, va="top")
 
 
+class Flow:
+    """Lays text and images down portrait pages top to bottom, measuring each block as it
+    renders and starting a new page when the next block won't fit above the footer."""
+    TOP, BOTTOM, LEFT, RIGHT = 0.905, 0.05, 0.06, 0.94
+
+    def __init__(self, rep: Report, title: str, source: str = "", section: str | None = None,
+                 mono: bool = False):
+        self.rep, self.title, self.source, self.section, self.mono = rep, title, source, section, mono
+        self.fig, self.pages = None, 0
+        self._new_page()
+
+    def _new_page(self):
+        if self.fig is not None:
+            self._save()
+        self.pages += 1
+        self.fig = plt.figure(figsize=PAGE, dpi=72)
+        first = self.pages == 1
+        header(self.fig, self.title + ("" if first else " (cont.)"), self.source if first else "")
+        self.y = self.TOP if first else 0.915
+        # measure with the PDF renderer itself: the screen (Agg) renderer reports text about
+        # 8% shorter than the PDF draws it, which let long pages run into the footer
+        self.renderer = RendererPdf(PdfFile(io.BytesIO()), 72, PAGE[0] * 72, PAGE[1] * 72)
+
+    def _save(self):
+        self.rep.save(self.fig, self.section if self.pages == 1 else None)
+
+    def _height(self, artist) -> float:
+        return artist.get_window_extent(self.renderer).height / self.fig.bbox.height
+
+    def space(self, frac: float):
+        self.y -= frac
+
+    def text(self, s: str, size: float = 7.8, weight: str = "normal", color: str = C_TEXT,
+             width: int | None = None, gap: float = 0.004):
+        """A paragraph (or preformatted block when mono). Splits across pages if needed."""
+        width = width or (98 if self.mono else int(105 * 7.6 / size))
+        lines = []
+        for para in s.splitlines() or [""]:
+            if self.mono:
+                lines += textwrap.wrap(para, width, replace_whitespace=False,
+                                       drop_whitespace=False) or [""]
+            else:
+                lines += textwrap.wrap(para, width) or [""]
+        self.y -= gap
+        while lines:
+            t = self.fig.text(self.LEFT, self.y, "\n".join(lines), fontsize=size, weight=weight,
+                              color=color, va="top", ha="left", linespacing=1.32,
+                              family="monospace" if self.mono else "sans-serif", parse_math=False)
+            h = self._height(t)
+            if self.y - h >= self.BOTTOM:
+                self.y -= h
+                return
+            t.remove()
+            fit = int((self.y - self.BOTTOM) / (h / len(lines)))
+            while fit >= 2 or (fit >= 1 and len(lines) == 1):
+                part = self.fig.text(self.LEFT, self.y, "\n".join(lines[:fit]), fontsize=size,
+                                     weight=weight, color=color, va="top", ha="left",
+                                     linespacing=1.32, parse_math=False,
+                                     family="monospace" if self.mono else "sans-serif")
+                ph = self._height(part)
+                if self.y - ph >= self.BOTTOM:  # estimate verified: it fits
+                    self.y -= ph
+                    lines = lines[fit:]
+                    break
+                part.remove()
+                fit -= 1
+            self._new_page()
+
+    def heading(self, s: str):
+        # keep a heading with at least a few lines of what follows
+        if self.y - 0.08 < self.BOTTOM:
+            self._new_page()
+        self.text(s, size=9.5, weight="bold", gap=0.012)
+
+    def image(self, img: Image.Image, max_h: float, caption: str = ""):
+        aspect = img.height / img.width * PAGE[0] / PAGE[1]  # height per unit width, in fig fractions
+        w = min(self.RIGHT - self.LEFT, max_h / aspect)
+        h = w * aspect
+        if self.y - h - 0.02 < self.BOTTOM:
+            self._new_page()
+        if caption:
+            self.text(caption, size=7.5, color=C_MUTED, gap=0.006)
+        ax = self.fig.add_axes([self.LEFT, self.y - h - 0.004, w, h])
+        ax.imshow(img)
+        ax.axis("off")
+        self.y -= h + 0.01
+
+    def finish(self):
+        self._save()
+
+
 def text_pages(rep: Report, title: str, text: str, source: str, mono: bool = False,
                section: str | None = None):
     """Flow long text over as many portrait pages as needed."""
-    width = 98 if mono else 105
-    lines: list[str] = []
-    for para in text.splitlines():
-        if not para.strip():
-            lines.append("")
-            continue
-        if mono:
-            lines.extend(textwrap.wrap(para, width, replace_whitespace=False,
-                                       drop_whitespace=False) or [""])
-        else:
-            lines.extend(textwrap.wrap(para, width) or [""])
-    # collapse runs of blank lines
-    cleaned = []
-    for ln in lines:
-        if ln == "" and cleaned and cleaned[-1] == "":
-            continue
-        cleaned.append(ln)
-    per_page = 72
-    while cleaned and cleaned[-1] == "":
-        cleaned.pop()
-    chunks = [cleaned[i:i + per_page] for i in range(0, len(cleaned), per_page)] or [[]]
-    if len(chunks) > 1 and len(chunks[-1]) <= 4:  # avoid a near-empty last page
-        chunks[-2].extend(chunks.pop())
-    for i, chunk in enumerate(chunks):
-        fig = plt.figure(figsize=PAGE)
-        header(fig, title + (f" (cont. {i + 1}/{len(chunks)})" if i else ""), source if i == 0 else "")
-        fig.text(0.06, 0.915, "\n".join(chunk), fontsize=7.6, va="top", ha="left",
-                 family="monospace" if mono else "sans-serif", color=C_TEXT, linespacing=1.32,
-                 parse_math=False)
-        rep.save(fig, section if i == 0 else None)
+    flow = Flow(rep, title, source, section, mono=mono)
+    cleaned = re.sub(r"\n{3,}", "\n\n", text.strip("\n"))
+    flow.text(cleaned, size=7.6, gap=0.0)
+    flow.finish()
 
 
 def image_page(rep: Report, title: str, images: list[Image.Image], source: str,
@@ -286,51 +352,238 @@ def avalanche_section(rep: Report):
     # The UAC site serves U+FFFD in place of some punctuation: after a digit it is a
     # foot mark, elsewhere usually an em dash.
     body = re.sub("(?<=\\d)\ufffd", "'", body).replace("\ufffd", " – ")
-    # page text is one token per line; rejoin into paragraphs
+
+    # page text is one token per line; rejoin into ("h", heading) / ("p", paragraph) items
     headings = {"Special Announcements", "Weather and Snow", "Recent Avalanches",
-                "Additional Information", "Description", "Type", "Location",
-                "Likelihood", "Size"}
-    out, buf = [], []
+                "Additional Information", "Description"}
+    skip_headings = {"Type", "Location", "Likelihood", "Size"}
+    items, buf = [], []
+
+    def flush():
+        if buf:
+            items.append(("p", re.sub(r"\s+([.,;:!?])", r"\1", " ".join(buf))))
+            buf.clear()
+
     for ln in body.split("\n"):
-        if ln in headings or ln.startswith("Avalanche Problem #"):
-            if buf:
-                out.append(" ".join(buf)); buf = []
-            if ln in {"Type", "Location", "Likelihood", "Size"}:
-                continue
-            out.append("")
-            out.append(ln.upper())
+        if ln in headings or ln in skip_headings or ln.startswith("Avalanche Problem #"):
+            flush()
+            if ln not in skip_headings:
+                items.append(("h", ln))
         elif ln in {"Low", "Moderate", "Considerable", "High", "Extreme",
                     "Learn how to read the forecast", "here"}:
             continue
         else:
             buf.append(ln)
             if re.search(r"[.!?:]$", ln) and len(" ".join(buf)) > 60:
-                out.append(" ".join(buf)); buf = []
-    if buf:
-        out.append(" ".join(buf))
-    para_text = "\n".join(out)
-    para_text = re.sub(r"\s+([.,;:!?])", r"\1", para_text)
+                flush()
+    flush()
 
-    # images: danger rose + problem roses/graphics, all under /sites/default/files/forecast/
-    imgs, caps = [], []
+    # images: overall danger rose first, then one location rose per avalanche problem
+    imgs = []
     for img in main.find_all("img"):
         src = img.get("src") or ""
         if "/files/forecast/" in src:
-            url = requests.compat.urljoin(UAC_URL, src)
             try:
-                imgs.append(fetch_image(url))
-                caps.append("Overall danger rose" if not imgs[:-1] else f"Avalanche problem #{len(imgs) - 1} location")
+                imgs.append(fetch_image(requests.compat.urljoin(UAC_URL, src)))
             except Exception:
-                pass
+                imgs.append(None)
+    rose, problem_imgs = (imgs[0] if imgs else None), imgs[1:]
 
-    if imgs:
-        image_page(rep, "Avalanche Forecast — Salt Lake Mountains", imgs[:3],
-                   f"Utah Avalanche Center  ·  {UAC_URL}", section="Avalanche forecast (UAC)",
-                   captions=caps[:3])
-        text_pages(rep, "Avalanche Forecast — Salt Lake Mountains", para_text, UAC_URL)
-    else:
-        text_pages(rep, "Avalanche Forecast — Salt Lake Mountains", para_text, UAC_URL,
-                   section="Avalanche forecast (UAC)")
+    flow = Flow(rep, "Avalanche Forecast — Salt Lake Mountains",
+                f"Utah Avalanche Center  ·  {UAC_URL}", section="Avalanche forecast (UAC)")
+    if rose is not None:
+        flow.image(rose, max_h=0.24, caption="Overall danger rose")
+    problem, awaiting_type = 0, False
+    for kind, txt in items:
+        if kind == "h" and txt.startswith("Avalanche Problem #"):
+            problem += 1
+            flow.heading(f"Avalanche Problem #{problem}")
+            awaiting_type = True
+        elif kind == "h":
+            flow.text(txt, size=8.2, weight="bold", gap=0.008) if txt == "Description" \
+                else flow.heading(txt)
+        elif awaiting_type:
+            # the line right after "Avalanche Problem #N" is its type, e.g. "Persistent Weak
+            # Layer": show it, then that problem's location rose, then the description
+            flow.text(txt, size=9, weight="bold", color=C_WARM, gap=0.002)
+            img = problem_imgs[problem - 1] if problem - 1 < len(problem_imgs) else None
+            if img is not None:
+                flow.image(img, max_h=0.16)
+            awaiting_type = False
+        else:
+            flow.text(txt)
+    flow.finish()
+
+
+# --------------------------------------------------------------------------- avalanches past 7 days
+UAC_EXPLORER = "https://utahavalanchecenter.org/observations-explorer"
+UAC_AVY_API = "https://utahavalanchecenter.org/api/v2/avalanches"
+AVY_REGION = "Salt Lake"
+
+AVY_TYPES = ["Dry Loose", "Soft Slab", "Hard Slab", "Wet Loose", "Wet Slab", "Cornice Fall",
+             "Glide", "Roof Avalanche"]
+AVY_PROBLEMS = ["New Snow (NS)", "Persistent Weak Layer (PWL)", "Wind Drifted Snow", "Cornice",
+                "Glide", "Normal Caution"]
+AVY_LAYERS = ["New Snow (NS)", "Density Change", "Old Snow Interface", "Facets", "Depth Hoar",
+              "Surface Hoar", "Graupel", "Wet Grains", "Ground Interface"]
+AVY_TRIGGERS = ["Unknown", "Natural", "Skier", "Snowboarder", "Snowmobile", "Snow Bike",
+                "Snow Shoe", "Explosive", "Hiker", "Snow Cat", "Vehicle", "Other"]
+ASPECT_DEG = {"North": 0, "Northeast": 45, "East": 90, "Southeast": 135, "South": 180,
+              "Southwest": 225, "West": 270, "Northwest": 315}
+DEPTH_CMAP = LinearSegmentedColormap.from_list("depth", ["#86b6ef", "#3987e5", "#1c5cab", "#0d366b"])
+DEPTH_NORM = Normalize(vmin=0, vmax=36, clip=True)  # crown depth, inches; 36"+ = darkest
+
+
+def fetch_avalanches(days: int = 7, region: str = AVY_REGION):
+    """Avalanches reported to the UAC in `region` over the past `days` days: the same data
+    the observations explorer shows (and exports as CSV). Avalanches carry numeric location
+    IDs, so the explorer page's region list maps "Salt Lake" to all the IDs inside it."""
+    html = get(UAC_EXPLORER).text
+    i = html.index('"regions":[') + len('"regions":')
+    regions, _ = json.JSONDecoder().raw_decode(html, i)
+    tids = set(next(g for g in regions if g["name"] == region and g["depth"] == 0)["tids"])
+    end = dt.datetime.now(TZ).date()
+    start = end - dt.timedelta(days=days)
+    allav = get(UAC_AVY_API, params={"start_date": start.isoformat(),
+                                     "end_date": end.isoformat()}).json()
+    return [a for a in allav if set(a.get("region") or []) & tids], start, end
+
+
+def _avy_label(value: str, options: list[str]) -> str:
+    """Map a UAC value onto one of the listed labels, e.g. "Persistent Weak Layer" ->
+    "Persistent Weak Layer (PWL)", "New Snow/Old Snow Interface" -> "Old Snow Interface"."""
+    v = value.lower()
+    for o in options:
+        if v in (o.lower(), re.sub(r"\s*\(.*\)", "", o).lower()):
+            return o
+    for o in options:
+        base = re.sub(r"\s*\(.*\)", "", o).lower()
+        if base != "new snow" and base in v:
+            return o
+    if "new snow" in v:
+        return next(o for o in options if o.startswith("New Snow"))
+    return "Other" if "Other" in options else f"Other: {value}"
+
+
+def _avy_tally(values, options):
+    counts, unreported = {}, 0
+    for v in values:
+        vs = [x for x in (v if isinstance(v, list) else [v]) if x]
+        if not vs:
+            unreported += 1
+        for x in vs:
+            k = _avy_label(x, options)
+            counts[k] = counts.get(k, 0) + 1
+    extra = [k for k in counts if k not in options]
+    return [(o, counts.get(o, 0)) for o in options + extra], unreported
+
+
+def avalanche_activity_section(rep: Report, days: int = 7):
+    av, start, end = fetch_avalanches(days)
+    n = len(av)
+    fig = plt.figure(figsize=LAND)
+    header(fig, f"Avalanches Past {days} Days — {AVY_REGION}",
+           f"{n} avalanche{'s' if n != 1 else ''} reported to the Utah Avalanche Center, "
+           f"{start:%b %d} – {end:%b %d %Y}  ·  {UAC_EXPLORER}")
+
+    # ---- aspect / elevation: N at top, clockwise; 13,000 ft at the centre
+    e_top, e_bottom = 13000, 4000
+    ax = fig.add_axes([0.045, 0.13, 0.34, 0.66], projection="polar")
+    ax.set_theta_zero_location("N")
+    ax.set_theta_direction(-1)
+    ax.set_ylim(0, e_top - e_bottom)
+    ring_elevs = list(range(12000, e_bottom - 1, -1000))
+    ax.set_yticks([e_top - e for e in ring_elevs])
+    ax.set_yticklabels([f"{e // 1000}k" if e % 2000 == 0 else "" for e in ring_elevs],
+                       fontsize=6.5, color=C_MUTED)
+    ax.set_rlabel_position(202.5)
+    ax.set_xticks(np.deg2rad(list(ASPECT_DEG.values())),
+                  ["N", "NE", "E", "SE", "S", "SW", "W", "NW"], fontsize=9)
+    ax.grid(color="#cfcfcf", lw=0.7)
+    for e in (8000, 10000, 12000):  # emphasise every 2,000 ft
+        ax.plot(np.linspace(0, 2 * np.pi, 200), [e_top - e] * 200, color="#a8a8a8", lw=1.1, zorder=1)
+    ax.spines["polar"].set_color("#8c8c8c")
+    ax.set_title("Avalanches by Aspect and Elevation", fontsize=10.5, weight="bold", pad=14)
+
+    # one dot per aspect x 1,000-ft band: area = avalanche count, color = mean crown depth
+    area, c_unknown = 75, "#c4c4c4"
+    groups, unplotted = {}, 0
+    for a in av:
+        asp, el = a.get("aspect"), a.get("elevation")
+        if asp not in ASPECT_DEG or not el or not (e_bottom <= el <= e_top):
+            unplotted += 1
+            continue
+        band = min(int(el // 1000) * 1000, e_top - 1000)
+        try:
+            depth = float(a.get("depthKey") or 0)
+        except ValueError:
+            depth = 0
+        g = groups.setdefault((asp, band), {"n": 0, "depths": []})
+        g["n"] += 1
+        if depth > 0:
+            g["depths"].append(depth)
+    for (asp, band), g in sorted(groups.items(), key=lambda kv: -kv[1]["n"]):
+        r = e_top - (band + 500)
+        color = DEPTH_CMAP(DEPTH_NORM(np.mean(g["depths"]))) if g["depths"] else c_unknown
+        ax.scatter(np.deg2rad(ASPECT_DEG[asp]), r, s=area * g["n"], color=color, alpha=0.9,
+                   edgecolor="white", lw=1.0, zorder=3)
+        if g["n"] > 1:
+            ax.text(np.deg2rad(ASPECT_DEG[asp]), r, str(g["n"]), ha="center", va="center",
+                    fontsize=7, weight="bold", color="white" if g["depths"] else C_TEXT, zorder=4)
+    if not av:
+        ax.text(0, 0, "No avalanches reported", ha="center", va="center", fontsize=9, color=C_MUTED)
+
+    note = ("Rings: elevation, 13,000 ft at the centre to 4,000 ft at the edge\n"
+            "one dot per aspect and 1,000-ft band")
+    if unplotted:
+        note += f" · {unplotted} without aspect/elevation not shown"
+    fig.text(0.215, 0.115, note, ha="center", fontsize=7, color=C_MUTED)
+    for i, k in enumerate((1, 2, 4)):  # size key
+        fig.add_artist(plt.Line2D([0.06 + i * 0.045], [0.075], marker="o", ls="",
+                                  markersize=np.sqrt(area * k), color="#9a9a9a",
+                                  markeredgecolor="white", transform=fig.transFigure))
+        fig.text(0.06 + i * 0.045 + 0.013 + 0.003 * k, 0.075, str(k), va="center", fontsize=7,
+                 color=C_TEXT)
+    fig.text(0.06, 0.035, "avalanches per dot", fontsize=6.5, color=C_MUTED)
+    cax = fig.add_axes([0.235, 0.07, 0.13, 0.014])  # depth color key
+    cb = fig.colorbar(plt.cm.ScalarMappable(norm=DEPTH_NORM, cmap=DEPTH_CMAP), cax=cax,
+                      orientation="horizontal")
+    cb.set_ticks([0, 12, 24, 36], labels=['0"', '12"', '24"', '36"+'])
+    cb.ax.tick_params(labelsize=6, length=2, pad=1)
+    cb.outline.set_linewidth(0.4)
+    fig.text(0.235, 0.035, "average crown depth  ·  ", fontsize=6.5, color=C_MUTED)
+    fig.add_artist(plt.Line2D([0.343], [0.039], marker="o", ls="", markersize=5, color=c_unknown,
+                              transform=fig.transFigure))
+    fig.text(0.35, 0.035, "unknown", fontsize=6.5, color=C_MUTED)
+
+    # ---- four bar charts, 2 x 2
+    charts = [
+        ("Avalanches by Type", _avy_tally([a.get("avalancheType") for a in av], AVY_TYPES)),
+        ("Avalanches by Problem", _avy_tally([a.get("avalancheProblem") for a in av], AVY_PROBLEMS)),
+        ("Avalanches by Weak Layer", _avy_tally([a.get("weakLayer") for a in av], AVY_LAYERS)),
+        ("Avalanches by Trigger", _avy_tally([a.get("trigger") for a in av], AVY_TRIGGERS)),
+    ]
+    for (title, (rows, unreported)), (x0, y0) in zip(
+            charts, [(0.565, 0.55), (0.85, 0.55), (0.565, 0.1), (0.85, 0.1)]):
+        bx = fig.add_axes([x0, y0, 0.115, 0.3])
+        bx.set_axisbelow(True)
+        labels = [r[0] for r in rows][::-1]
+        vals = [r[1] for r in rows][::-1]
+        top = max(vals + [1])
+        bx.barh(labels, vals, color=C_COOL, height=0.65)
+        for yi, v in enumerate(vals):
+            if v:
+                bx.text(v + top * 0.03, yi, str(v), va="center", fontsize=6.5, color=C_TEXT)
+        bx.set_xlim(0, top * 1.2)
+        bx.tick_params(axis="y", labelsize=6.5, length=0)
+        bx.tick_params(axis="x", labelsize=6)
+        bx.xaxis.get_major_locator().set_params(integer=True)
+        bx.grid(axis="y", visible=False)
+        fig.text(x0 - 0.135, y0 + 0.33, title, fontsize=9.5, weight="bold", color=C_TEXT)
+        if unreported:
+            bx.text(1.0, -0.13, f"{unreported} of {n} not reported", transform=bx.transAxes,
+                    ha="right", fontsize=6.5, color=C_MUTED)
+    rep.save(fig, f"Avalanches past {days} days (UAC)")
 
 
 # --------------------------------------------------------------------------- forecast: AFD
@@ -1348,7 +1601,8 @@ def title_page(rep: Report, site: Site, days: int, statuses: list[tuple[str, str
         y -= 0.022
     y -= 0.03
     ids = "|".join(sid for _, _, sid in site.stations)
-    srcs = ([UAC_URL, AFD_URL] + [p.url for p in site.points]
+    srcs = ([UAC_URL, f"{UAC_EXPLORER} (avalanches, {AVY_REGION})", AFD_URL]
+            + [p.url for p in site.points]
             + [f"{PLUME_PAGE}?t=ensgefsds&d=PL&r={site.plume_station}"]
             + (["https://www.ncei.noaa.gov/access/homr/api"] if site.ncei_ghcnd else [])
             + [f"{WRH_TIMESERIES}?site={ids}&hourly=true&hours=720",
@@ -1378,6 +1632,7 @@ def build_report(site: Site, args, overrides: dict[str, str], now: dt.datetime, 
                          lambda r: ncei_section(r, args.days, site.ncei_ghcnd)))
     sections.append((f"History: {site.history_label}",
                      lambda r: station_section(r, site, args.synoptic_token, args.days, overrides)))
+    sections.append(("Avalanches past 7 days (UAC)", lambda r: avalanche_activity_section(r)))
 
     def build(path, statuses_in=None, toc_in=None):
         statuses = []

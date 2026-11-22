@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Comprehensive Alta / Salt Lake mountains weather report -> PDF.
 
 Forecast sections (scraped):
@@ -17,12 +17,18 @@ History sections:
     snow, but no wind.
   * Mesonet stations ALTA - BASE, COLLINS, TOP OF COLLINS, MOUNT BALDY and
     LCC - CARDIFF PEAK: daily temperature, wind speed and wind direction candlesticks.
-    NCEI/HOMR doesn't carry these stations. Data comes from Synoptic Data (MesoWest)
-    when a working token is set (--synoptic-token or SYNOPTIC_TOKEN), which gives
-    complete hourly data. Without one it uses the public NWS API (api.weather.gov,
-    the same observations the weather.gov timeseries pages show), which needs no key
-    but has readings for only about half the hours. Both serve ~7 days, so each run
-    saves what it gets in data/ and the charts fill toward the full window over time.
+    NCEI/HOMR doesn't carry these stations. Sources, tried in order per station:
+      1. the weather.gov station timeseries page (https://www.weather.gov/wrh/timeseries),
+         read with headless Chromium via Playwright, since the table is drawn by
+         JavaScript. Full hourly data for up to 30 days (the page's limit is 720 h).
+      2. Synoptic Data (MesoWest), when --synoptic-token / SYNOPTIC_TOKEN is set and
+         works (7 days on the free plan).
+      3. the public NWS API (api.weather.gov): ~7 days, roughly half the hours.
+    Each run also saves what it gets in data/, and the charts merge it in.
+    Setup for (1):  pip install playwright, then
+        $env:PLAYWRIGHT_BROWSERS_PATH = "$HOME\.playwright-browsers"
+        python -m playwright install chromium-headless-shell
+    (the script uses ~/.playwright-browsers automatically when it exists)
 
 Usage:
     python weather_report.py                      # writes reports/weather_report_<timestamp>.pdf
@@ -897,6 +903,12 @@ def scrape_wrh(stids: list[str], days: int) -> dict[str, pd.DataFrame]:
     key = (tuple(stids), days)
     if key in _WRH_CACHE:  # main() builds the PDF twice; scrape only once
         return _WRH_CACHE[key]
+    # Chromium lives in ~/.playwright-browsers rather than Playwright's default
+    # %LOCALAPPDATA%\ms-playwright, because new AppData folders created from inside
+    # packaged Windows apps get virtualized and are invisible to Task Scheduler.
+    home_browsers = os.path.join(os.path.expanduser("~"), ".playwright-browsers")
+    if os.path.isdir(home_browsers):
+        os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", home_browsers)
     from playwright.sync_api import sync_playwright
 
     # The page accepts at most 720 hours; asking for more silently returns only 72.
@@ -1070,7 +1082,9 @@ def title_page(rep: Report, days: int, statuses: list[tuple[str, str]]):
     y -= 0.03
     srcs = [UAC_URL, AFD_URL, NWS_GRAPHICAL_URL, NWS_DIGITAL_URL,
             f"{PLUME_PAGE}?t=ensgefsds&d=PL&r={PLUME_STATION}",
-            "https://www.ncei.noaa.gov/access/homr/api", "https://api.synopticdata.com/v2",
+            "https://www.ncei.noaa.gov/access/homr/api",
+            f"{WRH_TIMESERIES}?site=ATB|CLN|ALT|AMB|IFF&hourly=true&hours=720",
+            "https://api.synopticdata.com/v2",
             "https://api.weather.gov (station observations)"]
     fig.text(0.06, y, "Sources", fontsize=12, weight="bold"); y -= 0.025
     for s in srcs:

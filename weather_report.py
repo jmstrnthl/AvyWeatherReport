@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
 r"""
-Comprehensive Alta / Salt Lake mountains weather report -> PDF.
+Comprehensive mountain weather reports -> two PDFs:
+  reports/alta_weather_report_YYYYMMDD_HHMM.pdf   (Alta & Little Cottonwood)
+  reports/pc_weather_report_YYYYMMDD_HHMM.pdf     (Park City & Deer Valley)
+Locations, forecast points and stations for each report are set in SITES below.
 
-Forecast sections (scraped):
+Forecast sections (scraped; the first two are shared by both reports):
   * Utah Avalanche Center - Salt Lake forecast (text + danger rose + problem graphics)
   * NWS Salt Lake City Area Forecast Discussion (AFD)
-  * NWS point forecast for Alta: graphical meteograms + charts/table built from
-    the tabular ("digital") forecast
-  * University of Utah GEFS downscaled ensemble plume for Alta-Collins
+  * NWS point forecasts (Alta Base + Mount Superior / PC Base + PC Jupiter): hourly
+    charts, a daily summary and an hourly table, all built from the tabular
+    ("digital") forecast pages
+  * University of Utah GEFS downscaled ensemble plume (Alta-Collins / PCMR Summit)
 
 History sections:
-  * NCEI: the station is found with the HOMR API (https://www.ncei.noaa.gov/access/homr/api),
-    and its daily data comes from the NCEI Access Data Service. HOMR holds station
-    *metadata* only. The one NCEI station at Alta is the ALTA co-op station
-    (GHCND:USC00420072), which reports daily max/min temperature, precipitation and
-    snow, but no wind.
-  * Mesonet stations ALTA - BASE, COLLINS, TOP OF COLLINS, MOUNT BALDY and
-    LCC - CARDIFF PEAK: daily temperature, wind speed and wind direction candlesticks.
+  * Alta only - NCEI: the station is found with the HOMR API
+    (https://www.ncei.noaa.gov/access/homr/api) and its daily data comes from the NCEI
+    Access Data Service. HOMR holds station *metadata* only. The one NCEI station at
+    Alta is the ALTA co-op station (GHCND:USC00420072): daily max/min temperature,
+    precipitation and snow, no wind.
+  * Mesonet stations (Alta: ALTA - BASE, COLLINS, TOP OF COLLINS, MOUNT BALDY,
+    LCC - CARDIFF PEAK; Park City: DV - BURNS, DV - EMPIRE PEAK): 30-day daily
+    temperature, wind speed and wind direction candlesticks, plus the last 24 hours of
+    hourly temperature and wind/gusts and a 24-hour wind rose.
     NCEI/HOMR doesn't carry these stations. Sources, tried in order per station:
       1. the weather.gov station timeseries page (https://www.weather.gov/wrh/timeseries),
          read with headless Chromium via Playwright, since the table is drawn by
@@ -31,9 +37,10 @@ History sections:
     (the script uses ~/.playwright-browsers automatically when it exists)
 
 Usage:
-    python weather_report.py                      # writes reports/weather_report_<timestamp>.pdf
-    python weather_report.py --days 30 -o out.pdf
-    set SYNOPTIC_TOKEN=xxxx  (PowerShell: $env:SYNOPTIC_TOKEN="xxxx")
+    python weather_report.py                 # both reports, into reports/
+    python weather_report.py --site pc       # just Park City (or --site alta)
+    python weather_report.py --days 30 --outdir somewhere
+    $env:SYNOPTIC_TOKEN = "xxxx"             # optional fallback data source
 
 Requirements: requests, beautifulsoup4, pandas, numpy, matplotlib, pillow
 """
@@ -65,19 +72,14 @@ from PIL import Image
 
 # --------------------------------------------------------------------------- config
 TZ = ZoneInfo("America/Denver")
-LAT, LON = 40.5846, -111.6213
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; AltaWeatherReport/1.0)"}
 TIMEOUT = 45
 
+# Shared by both reports
 UAC_URL = "https://utahavalanchecenter.org/forecast/salt-lake"
 AFD_URL = ("https://forecast.weather.gov/product.php?site=SLC&issuedby=SLC&product=AFD"
            "&format=CI&version=1&glossary=1")
-NWS_GRAPHICAL_URL = (f"https://forecast.weather.gov/MapClick.php?lat={LAT}&lon={LON}"
-                     "&unit=0&lg=english&FcstType=graphical")
-NWS_DIGITAL_URL = (f"https://forecast.weather.gov/MapClick.php?lat={LAT}&lon={LON}"
-                   "&lg=english&&FcstType=digital")
 PLUME_PAGE = "https://weather.utah.edu/index.php"
-PLUME_STATION = "CLN"  # Alta-Collins
 
 HOMR_SEARCH = "https://www.ncei.noaa.gov/access/homr/services/station/search"
 NCEI_DATA = "https://www.ncei.noaa.gov/access/services/data/v1"
@@ -86,16 +88,58 @@ SYNOPTIC_BASE = "https://api.synopticdata.com/v2"
 NWS_API = "https://api.weather.gov"
 WRH_TIMESERIES = "https://www.weather.gov/wrh/timeseries"
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-# (display name, elevation ft, station ID). The IDs are the same in Synoptic/MesoWest
-# and the NWS API. Synoptic lists Mount Baldy as "ALTA - MT BALDY"; if an ID ever
-# stops resolving there, the station is matched by name instead.
-ALTA_STATIONS = [
-    ("ALTA - BASE", 8560, "ATB"),
-    ("ALTA - COLLINS", 9662, "CLN"),
-    ("ALTA - TOP OF COLLINS", 10443, "ALT"),
-    ("ALTA - MOUNT BALDY", 11066, "AMB"),
-    ("LCC - CARDIFF PEAK", 10059, "IFF"),
-]
+
+
+@dataclass
+class Point:
+    """An NWS point forecast location. elev is the label shown in titles; the NWS
+    page's own grid-cell elevation is read from the page and shown in the subtitle."""
+    label: str
+    elev: int
+    lat: float
+    lon: float
+
+    @property
+    def url(self) -> str:
+        return (f"https://forecast.weather.gov/MapClick.php?lat={self.lat}&lon={self.lon}"
+                "&unit=0&lg=english&FcstType=digital")
+
+
+@dataclass
+class Site:
+    key: str
+    title: str                  # title page heading
+    file_prefix: str            # <prefix>_YYYYMMDD_HHMM.pdf
+    points: list[Point]         # NWS point forecasts
+    plume_station: str          # weather.utah.edu plume site code
+    plume_name: str
+    stations: list[tuple]       # (display name, elevation ft, station ID) for history
+    history_label: str
+    include_ncei: bool = False  # NCEI/HOMR ALTA co-op page
+
+
+SITES = {
+    "alta": Site(
+        key="alta", title="Alta & Little Cottonwood", file_prefix="alta_weather_report",
+        points=[Point("Alta Base", 8560, 40.5846, -111.6213),
+                Point("Mount Superior", 10318, 40.592, -111.667)],
+        plume_station="CLN", plume_name="Alta-Collins",
+        # Station IDs are the same on weather.gov, Synoptic/MesoWest and the NWS API.
+        stations=[("ALTA - BASE", 8560, "ATB"),
+                  ("ALTA - COLLINS", 9662, "CLN"),
+                  ("ALTA - TOP OF COLLINS", 10443, "ALT"),
+                  ("ALTA - MOUNT BALDY", 11066, "AMB"),
+                  ("LCC - CARDIFF PEAK", 10059, "IFF")],
+        history_label="Alta stations", include_ncei=True),
+    "pc": Site(
+        key="pc", title="Park City & Deer Valley", file_prefix="pc_weather_report",
+        points=[Point("PC Base", 6697, 40.6461, -111.498),
+                Point("PC Jupiter", 9406, 40.613, -111.54)],
+        plume_station="PKC", plume_name="PCMR Summit",
+        stations=[("DV - BURNS", 7333, "DVE"),
+                  ("DV - EMPIRE PEAK", 9570, "EMPUT")],
+        history_label="Park City / Deer Valley stations"),
+}
 
 PAGE = (8.5, 11)  # portrait letter
 LAND = (11, 8.5)  # landscape letter
@@ -143,12 +187,13 @@ class Report:
     toc: list = field(default_factory=list)
     page_no: int = 0
     generated: dt.datetime = field(default_factory=lambda: dt.datetime.now(TZ))
+    label: str = "Weather report"
 
     def save(self, fig, section: str | None = None):
         self.page_no += 1
         if section:
             self.toc.append((section, self.page_no))
-        fig.text(0.5, 0.012, f"Alta weather report  ·  generated {self.generated:%a %b %d %Y %H:%M %Z}"
+        fig.text(0.5, 0.012, f"{self.label}  ·  generated {self.generated:%a %b %d %Y %H:%M %Z}"
                               f"  ·  page {self.page_no}", ha="center", fontsize=7, color=C_MUTED)
         self.pdf.savefig(fig)
         plt.close(fig)
@@ -346,43 +391,39 @@ def parse_digital(soup: BeautifulSoup) -> pd.DataFrame:
     return out[~out.index.duplicated()].sort_index()
 
 
-def nws_point_section(rep: Report):
-    # 1) the graphical meteograms, as the page renders them (two 48 h windows)
-    gsoup = soup_of(NWS_GRAPHICAL_URL)
-    img = next((i for i in gsoup.find_all("img") if "Plotter.php" in (i.get("src") or "")), None)
-    meteos = []
-    if img:
-        base = requests.compat.urljoin(NWS_GRAPHICAL_URL, img["src"])
-        for ahour in (0, 48):
-            url = re.sub(r"ahour=\d+", f"ahour={ahour}", base)
-            try:
-                meteos.append(fetch_image(url))
-            except Exception:
-                pass
-    if meteos:
-        image_page(rep, "NWS Point Forecast — Alta (graphical)", meteos,
-                   f"forecast.weather.gov  ·  {LAT}, {LON}  ·  hours 0–48 and 48–96",
-                   section="NWS Alta forecast", landscape=False,
-                   captions=["Next 48 hours", "Hours 48–96"])
-
-    # 2) the tabular forecast, all 7 days (the page shows 48 h at a time)
-    frames = []
+def fetch_point_forecast(pt: Point) -> tuple[pd.DataFrame, int | None]:
+    """All 7 days of the NWS tabular forecast for a point (the page shows 48 h at a
+    time), plus the NWS grid-cell elevation printed on the page."""
+    frames, grid_elev, last_err = [], None, None
     for ah in (0, 48, 96, 144):
         try:
-            frames.append(parse_digital(soup_of(NWS_DIGITAL_URL + f"&AheadHour={ah}")))
-        except Exception:
-            pass
+            soup = soup_of(pt.url + f"&AheadHour={ah}")
+            if grid_elev is None:
+                m = re.search(r"Elev\.?\s*([\d,]+)\s*ft", soup.get_text(" "))
+                grid_elev = int(m.group(1).replace(",", "")) if m else None
+            frames.append(parse_digital(soup))
+        except Exception as e:
+            last_err = e
     if not frames:
-        raise RuntimeError("NWS tabular forecast unavailable")
+        raise RuntimeError(f"NWS tabular forecast unavailable for {pt.label}: {last_err}")
     fc = pd.concat(frames)
-    fc = fc[~fc.index.duplicated()].sort_index()
+    return fc[~fc.index.duplicated()].sort_index(), grid_elev
 
-    # --- charts
+
+def point_forecast_section(rep: Report, pt: Point, section: str):
+    fc, grid_elev = fetch_point_forecast(pt)
+    title = f"NWS Point Forecast — {pt.label} (elev {pt.elev:,} ft)"
+    where = f"{pt.lat}, {pt.lon}" + (f"  ·  NWS grid elevation {grid_elev:,} ft" if grid_elev else "")
+    forecast_charts_page(rep, fc, title, where, section)
+    forecast_table_pages(rep, fc, title, where, pt.url)
+
+
+def forecast_charts_page(rep: Report, fc: pd.DataFrame, title: str, where: str, section: str):
     fig, axes = plt.subplots(4, 1, figsize=PAGE, sharex=True,
                              gridspec_kw=dict(height_ratios=[3, 2.4, 1.6, 2], hspace=0.18,
                                               left=0.09, right=0.95, top=0.9, bottom=0.07))
-    header(fig, "NWS Point Forecast — Alta (hourly charts)",
-           f"Built from the tabular forecast  ·  {fc.index[0]:%a %b %d %H:%M} – {fc.index[-1]:%a %b %d %H:%M %Z}")
+    header(fig, title + " — hourly charts",
+           f"{where}  ·  {fc.index[0]:%a %b %d %H:%M} – {fc.index[-1]:%a %b %d %H:%M %Z}")
     ax = axes[0]
     ax.plot(fc.index, fc.temp, color=C_WARM, lw=1.8, label="Temperature")
     ax.plot(fc.index, fc.dewpt, color="#3a7d44", lw=1.1, label="Dew point")
@@ -421,72 +462,142 @@ def nws_point_section(rep: Report):
     ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=[6, 12, 18], tz=TZ))
     for a in axes:
         a.grid(True, which="major", axis="x", color="#bbbbbb")
-    rep.save(fig, None if meteos else "NWS Alta forecast")
+    rep.save(fig, section)
 
-    # --- daily summary table
+
+PRECIP_COLS = [("rain", "Rain"), ("snow", "Snow"), ("thunder", "Thunder"),
+               ("freezing_rain", "Frz rain"), ("sleet", "Sleet")]
+
+
+def _draw_table(ax, header_row, rows, widths, fontsize=7, shade=None, bold=None):
+    """Table that exactly fills `ax` (one equal-height row per line)."""
+    ax.axis("off")
+    tbl = ax.table(cellText=rows, colLabels=header_row, colWidths=widths, cellLoc="center",
+                   bbox=[0, 0, 1, 1])
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(fontsize)
+    for (r, c), cl in tbl.get_celld().items():
+        cl.set_edgecolor("#d4d4d4")
+        cl.set_linewidth(0.4)
+        if r == 0:
+            cl.set_facecolor("#e8eef3")
+            cl.set_text_props(weight="bold")
+        else:
+            if shade is not None and shade[r - 1]:
+                cl.set_facecolor("#f3f5f7")
+            if bold is not None and bold[r - 1] and c == 0:
+                cl.set_text_props(weight="bold")
+    return tbl
+
+
+def _fmt(v, nd=0):
+    return "" if v is None or (isinstance(v, float) and np.isnan(v)) else f"{v:.{nd}f}"
+
+
+def forecast_table_pages(rep: Report, fc: pd.DataFrame, title: str, where: str, url: str):
+    """Daily summary + hourly table, built from the NWS tabular forecast. Hourly for the
+    first 48 hours, then every 3 hours to the end of the forecast."""
+    precip = [(k, lbl) for k, lbl in PRECIP_COLS
+              if k in fc and fc[k].astype(str).str.strip().ne("").any()
+              or k in ("rain", "snow")]
+
+    # --- daily summary rows
     daily = fc.groupby(fc.index.date).agg(
         high=("temp", "max"), low=("temp", "min"), wind_max=("wind", "max"),
         gust_max=("gust", "max"), pop_max=("pop", "max"), sky_mean=("sky", "mean"))
-    precip_types = []
-    for d in daily.index:
+    sum_rows = []
+    for d, r in daily.iterrows():
         day = fc[fc.index.date == d]
         kinds = []
-        for col in ["snow", "rain", "thunder", "freezing_rain", "sleet"]:
-            if col in day and day[col].astype(str).str.strip().ne("").any():
-                vals = sorted(set(v for v in day[col] if v))
-                kinds.append(f"{col.replace('_', ' ')} ({'/'.join(vals)})")
-        precip_types.append(", ".join(kinds) or "—")
-    daily["precip"] = precip_types
+        for k, lbl in PRECIP_COLS:
+            if k in day and day[k].astype(str).str.strip().ne("").any():
+                vals = sorted(set(v for v in day[k] if v))
+                kinds.append(f"{lbl.lower()} ({'/'.join(vals)})")
+        sum_rows.append([pd.Timestamp(d).strftime("%a %b %d"), _fmt(r.high), _fmt(r.low),
+                         _fmt(r.wind_max), _fmt(r.gust_max) or "—", _fmt(r.pop_max),
+                         _fmt(r.sky_mean), ", ".join(kinds) or "—"])
 
-    fig = plt.figure(figsize=PAGE)
-    header(fig, "NWS Point Forecast — Alta (daily summary)", NWS_DIGITAL_URL[:110])
-    ax = fig.add_axes([0.05, 0.45, 0.9, 0.45]); ax.axis("off")
-    cell = [[pd.Timestamp(d).strftime("%a %b %d"), f"{r.high:.0f}", f"{r.low:.0f}",
-             f"{r.wind_max:.0f}", "—" if np.isnan(r.gust_max) else f"{r.gust_max:.0f}",
-             f"{r.pop_max:.0f}", f"{r.sky_mean:.0f}", textwrap.fill(r.precip, 34)]
-            for d, r in daily.iterrows()]
-    tbl = ax.table(cellText=cell, loc="upper center", cellLoc="center",
-                   colLabels=["Day", "High °F", "Low °F", "Max wind", "Max gust", "Max PoP %",
-                              "Sky %", "Precip type (chance)"],
-                   colWidths=[0.12, 0.08, 0.08, 0.09, 0.09, 0.1, 0.07, 0.37])
-    tbl.auto_set_font_size(False); tbl.set_fontsize(8); tbl.scale(1, 2.2)
-    for (r, c), cl in tbl.get_celld().items():
-        cl.set_edgecolor("#cccccc")
-        if r == 0:
-            cl.set_facecolor("#e8eef3"); cl.set_text_props(weight="bold")
-    fig.text(0.06, 0.40, "Wind in mph. Precip type chances use NWS wording "
-                         "(SChc = slight chance, Chc = chance, Lkly = likely, Ocnl = occasional, Def = definite).",
-             fontsize=7.5, color=C_MUTED)
-    rep.save(fig)
+    # --- hourly rows: every hour for 48 h, then every 3 h
+    t0 = fc.index[0]
+    sel = fc[(fc.index < t0 + pd.Timedelta(hours=48)) | (fc.index.hour % 3 == 0)]
+    hdr = (["Day", "Hour", "Temp °F", "Dew pt", "Wind chill", "Wind mph", "Dir", "Gust",
+            "Sky %", "PoP %", "RH %"] + [lbl for _, lbl in precip])
+    widths = [0.09, 0.06, 0.07, 0.065, 0.075, 0.075, 0.055, 0.06, 0.06, 0.06, 0.06] + \
+             [0.065] * len(precip)
+    rows, shade, bold, prev_day = [], [], [], None
+    for t, r in sel.iterrows():
+        new_day = t.date() != prev_day
+        prev_day = t.date()
+        rows.append([t.strftime("%a %b %d") if new_day else "",
+                     t.strftime("%-I %p") if os.name != "nt" else t.strftime("%#I %p"),
+                     _fmt(r.temp), _fmt(r.dewpt), _fmt(r.chill), _fmt(r.wind),
+                     r.wdir if isinstance(r.wdir, str) else "", _fmt(r.gust),
+                     _fmt(r.sky), _fmt(r["pop"]), _fmt(r.rh)]
+                    + [(r[k] if k in r and isinstance(r[k], str) else "") for k, _ in precip])
+        shade.append(t.dayofyear % 2 == 0)
+        bold.append(new_day)
+
+    row_h = 0.0138  # figure fraction per table row on a landscape page
+    first_n = int(0.50 / row_h) - 1
+    rest_n = int(0.80 / row_h) - 1
+    chunks = [(0, first_n)]
+    while chunks[-1][1] < len(rows):
+        s = chunks[-1][1]
+        chunks.append((s, s + rest_n))
+    note = ("Wind in mph. Precip chances use NWS wording: SChc = slight chance, Chc = chance, "
+            "Lkly = likely, Ocnl = occasional, Def = definite.")
+    for i, (a, b) in enumerate(chunks):
+        part = rows[a:b]
+        if not part:
+            break
+        fig = plt.figure(figsize=LAND)
+        header(fig, title + (" — forecast table" if i == 0 else f" — forecast table (cont. {i + 1})"),
+               f"{where}  ·  {url}")
+        top = 0.90
+        if i == 0:
+            fig.text(0.04, top, "Daily summary", fontsize=10, weight="bold", va="top")
+            h = row_h * 1.25 * (len(sum_rows) + 1)
+            ax = fig.add_axes([0.04, top - 0.025 - h, 0.92, h])
+            _draw_table(ax, ["Day", "High °F", "Low °F", "Max wind", "Max gust", "Max PoP %",
+                             "Sky %", "Precip type (chance)"], sum_rows,
+                        [0.1, 0.07, 0.07, 0.08, 0.08, 0.08, 0.06, 0.46], fontsize=7.5)
+            top = top - 0.025 - h - 0.035
+            fig.text(0.04, top + 0.022, "Hourly forecast (every hour for 48 h, then every 3 h)",
+                     fontsize=10, weight="bold", va="top")
+        h = row_h * (len(part) + 1)
+        ax = fig.add_axes([0.04, top - h, 0.92, h])
+        _draw_table(ax, hdr, part, widths, fontsize=6.6, shade=shade[a:b], bold=bold[a:b])
+        fig.text(0.04, 0.035, note, fontsize=7, color=C_MUTED)
+        rep.save(fig)
 
 
 # --------------------------------------------------------------------------- forecast: plumes
-def plume_section(rep: Report):
+def plume_section(rep: Report, station: str, name: str):
     # Without a runcode the page serves the latest run; we still read the run from the HTML.
-    r = get(PLUME_PAGE, params={"t": "ensgefsds", "d": "PL", "r": PLUME_STATION})
+    r = get(PLUME_PAGE, params={"t": "ensgefsds", "d": "PL", "r": station})
     html = r.text
     paths = re.findall(r'"([^"]*ENSGEFSDSPL[^"]*\.png)"', html)
     if not paths:
-        # try today's and yesterday's runs explicitly
+        # try today's and the previous two days' runs explicitly
         for back in range(0, 3):
             day = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=back)
             for hh in ("18", "12", "06", "00"):
                 rc = f"{day:%Y%m%d}{hh}"
                 html = get(PLUME_PAGE, params={"runcode": rc, "t": "ensgefsds", "d": "PL",
-                                               "r": PLUME_STATION}).text
+                                               "r": station}).text
                 paths = re.findall(r'"([^"]*ENSGEFSDSPL[^"]*\.png)"', html)
                 if paths:
                     break
             if paths:
                 break
     if not paths:
-        raise RuntimeError("No plume images found on weather.utah.edu")
+        raise RuntimeError(f"No plume images found on weather.utah.edu for {station}")
     imgs = [fetch_image(requests.compat.urljoin(PLUME_PAGE, p)) for p in paths]
     run = re.search(r"(\d{10})F\d+", paths[0])
     run_txt = f"run {run.group(1)[:8]} {run.group(1)[8:]}Z" if run else ""
     for i, img in enumerate(imgs):
-        image_page(rep, "GEFS Downscaled Ensemble Plumes — Alta-Collins", [img],
-                   f"University of Utah  ·  {run_txt}  ·  weather.utah.edu (t=ensgefsds, d=PL, r=CLN)",
+        image_page(rep, f"GEFS Downscaled Ensemble Plumes — {name}", [img],
+                   f"University of Utah  ·  {run_txt}  ·  weather.utah.edu (t=ensgefsds, d=PL, r={station})",
                    section="Ensemble plumes (U of U)" if i == 0 else None,
                    landscape=img.width > img.height)
 
@@ -664,26 +775,6 @@ def ncei_section(rep: Report, days: int):
 
 
 # --------------------------------------------------------------------------- history: Synoptic
-def _norm(s: str) -> str:
-    return re.sub(r"[^A-Z0-9]", "", s.upper())
-
-
-def synoptic_resolve(token: str, overrides: dict[str, str]) -> list[dict]:
-    meta = get(f"{SYNOPTIC_BASE}/stations/metadata",
-               params={"token": token, "radius": f"{LAT},{LON},8", "complete": 1}).json()
-    if meta.get("SUMMARY", {}).get("RESPONSE_CODE") != 1:
-        raise RuntimeError(f"Synoptic metadata error: {meta.get('SUMMARY')}")
-    by_name = {_norm(s["NAME"]): s for s in meta.get("STATION", [])}
-    by_id = {s["STID"]: s for s in meta.get("STATION", [])}
-    out = []
-    for name, elev, stid in ALTA_STATIONS:
-        st = (by_id.get(overrides.get(name, "")) or by_id.get(stid)
-              or by_name.get(_norm(name)) or by_name.get(_norm(name.replace("MOUNT", "MT"))))
-        out.append({"name": name, "elev": elev, "stid": st["STID"] if st else None,
-                    "meta_elev": st.get("ELEVATION") if st else None})
-    return out
-
-
 def synoptic_timeseries(token: str, stids: list[str], days: int) -> dict[str, pd.DataFrame]:
     end = dt.datetime.now(dt.timezone.utc)
     start = (dt.datetime.now(TZ).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -793,23 +884,18 @@ ROSE_BINS = [(1, 5), (5, 10), (10, 15), (15, 25), (25, np.inf)]
 ROSE_COLORS = ["#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"]
 
 
-def wind_rose(fig, beside_ax, obs: pd.DataFrame, hours: int = 24):
-    """16-sector wind rose of the last `hours` of readings, placed to the right of
-    `beside_ax`. Bars are stacked by speed band and show % of readings; calm
-    readings (< 1 mph) have no direction, so they're counted separately."""
-    pos = beside_ax.get_position()
-    size_h = pos.height
-    size_w = size_h * fig.get_figheight() / fig.get_figwidth()  # keep it round
-    x0 = 0.885 - size_w / 2
-    ax = fig.add_axes([x0, pos.y0, size_w, size_h], projection="polar")
+def wind_rose(ax, obs: pd.DataFrame, hours: int = 24):
+    """16-sector wind rose of the last `hours` of readings on polar axes `ax`. Bars are
+    stacked by speed band and show % of readings; calm readings (< 1 mph) have no
+    direction, so they're counted separately."""
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
     ax.set_xticks(np.deg2rad([0, 90, 180, 270]), ["N", "E", "S", "W"], fontsize=7)
+    ax.tick_params(axis="x", pad=-2)
     ax.tick_params(axis="y", labelsize=5.5, colors=C_MUTED)
-    ax.set_title(f"Wind rose, last {hours} h", fontsize=9, weight="bold", pad=10)
+    ax.set_title(f"Wind rose, last {hours} h", fontsize=9, weight="bold", pad=4)
 
-    cutoff = obs.index.max() - pd.Timedelta(hours=hours) if len(obs) else None
-    recent = obs[obs.index > cutoff] if cutoff is not None else obs
+    recent = last_hours(obs, hours)
     recent = recent.dropna(subset=["wind", "wdir"]) if "wdir" in recent else recent.iloc[0:0]
     n = len(recent)
     if n == 0:
@@ -822,22 +908,67 @@ def wind_rose(fig, beside_ax, obs: pd.DataFrame, hours: int = 24):
     theta = np.deg2rad(np.arange(16) * 22.5)
     bottom = np.zeros(16)
     for (lo, hi), color in zip(ROSE_BINS, ROSE_COLORS):
-        sel = (windy["wind"] >= lo) & (windy["wind"] < hi)
-        pct = np.bincount(sector[sel], minlength=16) / n * 100
+        s = (windy["wind"] >= lo) & (windy["wind"] < hi)
+        pct = np.bincount(sector[s], minlength=16) / n * 100
         ax.bar(theta, pct, width=np.deg2rad(22.5) * 0.9, bottom=bottom, color=color,
                edgecolor="white", linewidth=0.4,
                label=f"{lo}–{hi:.0f}" if np.isfinite(hi) else f"{lo}+")
         bottom += pct
     top = max(bottom.max(), 1)
     ax.set_ylim(0, top * 1.08)
-    ax.set_yticks(np.linspace(0, top, 3)[1:], [f"{v:.0f}%" for v in np.linspace(0, top, 3)[1:]])
+    ticks = np.linspace(0, top, 3)[1:]
+    ax.set_yticks(ticks, [f"{v:.0f}%" for v in ticks])
     ax.set_rlabel_position(135)
-    # speed legend in the free space above the rose (right of the wind-speed panel)
-    fig.legend(*ax.get_legend_handles_labels(), title="mph", loc="lower center",
-               bbox_to_anchor=(0.885, pos.y1 + 0.075), fontsize=6.5, title_fontsize=7,
-               frameon=False, ncol=1, handlelength=1, handleheight=0.8, labelspacing=0.25)
-    fig.text(0.885, pos.y0 - 0.035, f"{n} readings · calm {calm / n:.0%}", ha="center",
-             fontsize=6.5, color=C_MUTED)
+    # speed legend in the lower-left corner of the rose, readings/calm in the lower right
+    ax.legend(title="mph", loc="lower left", bbox_to_anchor=(-0.42, -0.2), fontsize=6,
+              title_fontsize=6.5, frameon=False, handlelength=0.9, handleheight=0.7,
+              labelspacing=0.2, borderaxespad=0)
+    ax.text(1.32, -0.2, f"{n} readings\ncalm {calm / n:.0%}", transform=ax.transAxes,
+            ha="right", va="bottom", fontsize=6, color=C_MUTED)
+
+
+def last_hours(obs: pd.DataFrame, hours: int = 24) -> pd.DataFrame:
+    """Readings from the `hours` before the station's latest reading."""
+    if obs.empty:
+        return obs
+    return obs[obs.index > obs.index.max() - pd.Timedelta(hours=hours)]
+
+
+def recent_temp_chart(ax, obs: pd.DataFrame, hours: int = 24):
+    r = last_hours(obs, hours).dropna(subset=["temp"])
+    ax.set_title(f"Hourly temperature, last {hours} h", loc="left", fontsize=9, weight="bold")
+    if r.empty:
+        ax.text(0.5, 0.5, "no data", transform=ax.transAxes, ha="center", color=C_MUTED)
+        return
+    ax.plot(r.index, r.temp, color=C_WARM, lw=1.6, marker="o", ms=2.2)
+    ax.axhline(32, color="#999999", lw=0.8, ls=":")
+    lo, hi = r.temp.min(), r.temp.max()
+    ax.set_ylim(lo - 3, hi + 4)
+    ax.annotate(f"{r.temp.iloc[-1]:.0f}°", (r.index[-1], r.temp.iloc[-1]), xytext=(3, 3),
+                textcoords="offset points", fontsize=7, color=C_WARM)
+    ax.set_ylabel("°F")
+
+
+def recent_wind_chart(ax, obs: pd.DataFrame, hours: int = 24):
+    r = last_hours(obs, hours)
+    ax.set_title(f"Hourly wind and gusts, last {hours} h", loc="left", fontsize=9, weight="bold")
+    if r.empty or r.wind.isna().all():
+        ax.text(0.5, 0.5, "no data", transform=ax.transAxes, ha="center", color=C_MUTED)
+        return
+    ax.plot(r.index, r.wind, color=C_WIND, lw=1.6, label="Wind")
+    if r.gust.notna().any():
+        ax.scatter(r.index, r.gust, marker="^", s=12, color=C_GUST, label="Gust", zorder=3)
+    ax.set_ylim(0, np.nanmax([r.wind.max(), r.gust.max(), 5]) * 1.3)
+    ax.set_ylabel("mph")
+    ax.legend(loc="upper left", fontsize=6.5, frameon=False, ncol=2)
+
+
+def hour_axis(ax):
+    ax.xaxis.set_major_locator(mdates.HourLocator(byhour=[0, 6, 12, 18], tz=TZ))
+    ax.xaxis.set_minor_locator(mdates.HourLocator(interval=1, tz=TZ))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M", tz=TZ))
+    ax.tick_params(axis="x", labelsize=6.5)
+    ax.tick_params(axis="y", labelsize=7)
 
 
 def nws_observations(stid: str, days: int) -> pd.DataFrame:
@@ -977,14 +1108,15 @@ def _parse_wrh_table(rows: list[list[str]], now: dt.datetime) -> pd.DataFrame:
     return df[~df.index.duplicated()].sort_index()
 
 
-def fetch_station_obs(token: str | None, days: int, overrides: dict[str, str]):
+def fetch_station_obs(stations_cfg: list[tuple], token: str | None, days: int,
+                      overrides: dict[str, str]):
     """Fresh observations for every station, trying sources in order:
       1. the weather.gov timeseries page (full hourly history for the whole window),
       2. Synoptic, when a token is set and works (last 7 days on the free plan),
       3. the public NWS API (about 7 days, roughly half the hours).
     Returns (stations, {stid: df}, {stid: source label})."""
     stations = [{"name": n, "elev": el, "stid": overrides.get(n, sid)}
-                for n, el, sid in ALTA_STATIONS]
+                for n, el, sid in stations_cfg]
     ids = [s["stid"] for s in stations]
     series, sources = {}, {}
 
@@ -1013,8 +1145,10 @@ def fetch_station_obs(token: str | None, days: int, overrides: dict[str, str]):
     return stations, series, sources
 
 
-def synoptic_section(rep: Report, token: str | None, days: int, overrides: dict[str, str]):
-    stations, series, sources = fetch_station_obs(token, days, overrides)
+def station_section(rep: Report, site: Site, token: str | None, days: int,
+                    overrides: dict[str, str]):
+    section = f"History: {site.history_label}"
+    stations, series, sources = fetch_station_obs(site.stations, token, days, overrides)
     if not series:
         raise RuntimeError("No station data from weather.gov, Synoptic or the NWS API")
     for stid, df in series.items():
@@ -1028,42 +1162,60 @@ def synoptic_section(rep: Report, token: str | None, days: int, overrides: dict[
         if not s["stid"] or s["stid"] not in series or series[s["stid"]].empty:
             error_page(rep, f"History: {title}",
                        f"No data returned for this station (ID: {s['stid'] or 'not found'}).",
-                       section="History: Alta stations" if first else None)
+                       section=section if first else None)
             first = False
             continue
-        obs = series[s["stid"]]
-        obs = obs[obs.index >= window_start]
+        allobs = series[s["stid"]]
+        obs = allobs[allobs.index >= window_start]
         srcs = (", ".join(sorted(obs["src"].dropna().unique())) if "src" in obs
                 else sources.get(s["stid"], "?"))
         t, w, wd = daily_stats(obs, days)
-        fig, (a1, a2, a3) = plt.subplots(3, 1, figsize=LAND, sharex=True,
-                                         gridspec_kw=dict(height_ratios=[3, 2.5, 2.2], hspace=0.28,
-                                                          left=0.07, right=0.725, top=0.86,
-                                                          bottom=0.07))
+
+        # left column: 30-day daily charts (shared date axis)
+        # right column: last-24-hour temperature, wind/gust, and the wind rose
+        fig = plt.figure(figsize=LAND)
+        gs = fig.add_gridspec(3, 2, width_ratios=[3.0, 1.0], height_ratios=[3, 2.5, 2.2],
+                              hspace=0.4, wspace=0.2, left=0.06, right=0.975, top=0.86,
+                              bottom=0.07)
+        a1 = fig.add_subplot(gs[0, 0])
+        a2 = fig.add_subplot(gs[1, 0], sharex=a1)
+        a3 = fig.add_subplot(gs[2, 0], sharex=a1)
+        b1 = fig.add_subplot(gs[0, 1])
+        b2 = fig.add_subplot(gs[1, 1], sharex=b1)
+        b3 = fig.add_subplot(gs[2, 1], projection="polar")
+
         have = t.high.notna().sum()
         header(fig, f"{title} — last {days} days",
                f"Station {s['stid']}  ·  data: {srcs}  ·  {len(obs):,} observations  ·  "
                f"{have} of {days} days with data  ·  daily = local calendar day ({TZ.key})")
         if have < days:
-            fig.text(0.93, 0.89, "Sources serve ~7 days; older days come from saved earlier runs "
-                                 "(data/ folder)", ha="right", fontsize=7.5, color=C_WARM)
+            fig.text(0.975, 0.89, "Older days come from saved earlier runs (data/ folder) when "
+                                  "a source has less history", ha="right", fontsize=7.5, color=C_WARM)
         candlestick_temp(a1, t, "Daily temperature — wick: high/low, body: midnight→midnight change")
         wind_chart(a2, w, "Daily wind speed")
         direction_chart(a3, wd, "Daily wind direction")
         date_axis(a3)
-        x0 = mdates.date2num(t.index[0]) - 0.7
-        a3.set_xlim(x0, mdates.date2num(t.index[-1]) + 0.7)
-        wind_rose(fig, a3, series[s["stid"]])
-        rep.save(fig, "History: Alta stations" if first else None)
+        plt.setp(a1.get_xticklabels(), visible=False)
+        plt.setp(a2.get_xticklabels(), visible=False)
+        a3.set_xlim(mdates.date2num(t.index[0]) - 0.7, mdates.date2num(t.index[-1]) + 0.7)
+
+        recent_temp_chart(b1, allobs)
+        recent_wind_chart(b2, allobs)
+        hour_axis(b2)
+        b1.tick_params(axis="y", labelsize=7)
+        plt.setp(b1.get_xticklabels(), visible=False)
+        wind_rose(b3, allobs)
+
+        rep.save(fig, section if first else None)
         first = False
     used = sorted(set(sources.values()))
     return "ok" if used == ["weather.gov"] else f"ok ({', '.join(used)})"
 
 
 # --------------------------------------------------------------------------- title + contents
-def title_page(rep: Report, days: int, statuses: list[tuple[str, str]]):
+def title_page(rep: Report, site: Site, days: int, statuses: list[tuple[str, str]]):
     fig = plt.figure(figsize=PAGE)
-    fig.text(0.06, 0.90, "Alta & Salt Lake Mountains", fontsize=24, weight="bold", color=C_TEXT)
+    fig.text(0.06, 0.90, site.title, fontsize=24, weight="bold", color=C_TEXT)
     fig.text(0.06, 0.862, "Comprehensive weather report", fontsize=15, color=C_MUTED)
     fig.text(0.06, 0.832, f"Generated {rep.generated:%A, %B %d %Y at %H:%M %Z}  ·  "
                           f"history window: last {days} days", fontsize=9, color=C_MUTED)
@@ -1077,15 +1229,16 @@ def title_page(rep: Report, days: int, statuses: list[tuple[str, str]]):
     fig.text(0.06, y, "Source status", fontsize=12, weight="bold"); y -= 0.03
     for name, st in statuses:
         fig.text(0.08, y, name, fontsize=9)
-        fig.text(0.42, y, st, fontsize=9, color=C_COOL if st == "ok" else C_WARM)
+        fig.text(0.46, y, st, fontsize=9, color=C_COOL if st == "ok" else C_WARM)
         y -= 0.022
     y -= 0.03
-    srcs = [UAC_URL, AFD_URL, NWS_GRAPHICAL_URL, NWS_DIGITAL_URL,
-            f"{PLUME_PAGE}?t=ensgefsds&d=PL&r={PLUME_STATION}",
-            "https://www.ncei.noaa.gov/access/homr/api",
-            f"{WRH_TIMESERIES}?site=ATB|CLN|ALT|AMB|IFF&hourly=true&hours=720",
-            "https://api.synopticdata.com/v2",
-            "https://api.weather.gov (station observations)"]
+    ids = "|".join(sid for _, _, sid in site.stations)
+    srcs = ([UAC_URL, AFD_URL] + [p.url for p in site.points]
+            + [f"{PLUME_PAGE}?t=ensgefsds&d=PL&r={site.plume_station}"]
+            + (["https://www.ncei.noaa.gov/access/homr/api"] if site.include_ncei else [])
+            + [f"{WRH_TIMESERIES}?site={ids}&hourly=true&hours=720",
+               "https://api.synopticdata.com/v2 (fallback)",
+               "https://api.weather.gov (station observations, fallback)"])
     fig.text(0.06, y, "Sources", fontsize=12, weight="bold"); y -= 0.025
     for s in srcs:
         fig.text(0.08, y, s[:115], fontsize=6.8, color=C_MUTED, family="monospace"); y -= 0.018
@@ -1093,43 +1246,33 @@ def title_page(rep: Report, days: int, statuses: list[tuple[str, str]]):
 
 
 # --------------------------------------------------------------------------- main
-def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("-o", "--output", help="output PDF path")
-    ap.add_argument("--days", type=int, default=30, help="history window in days (default 30)")
-    ap.add_argument("--synoptic-token", default=os.environ.get("SYNOPTIC_TOKEN"),
-                    help="Synoptic Data API token (or env SYNOPTIC_TOKEN)")
-    ap.add_argument("--stid", action="append", default=[],
-                    help="override a station ID, e.g. --stid 'ALTA - BASE=ATB' (repeatable)")
-    args = ap.parse_args(argv)
-
-    now = dt.datetime.now(TZ)
-    out = args.output or os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports",
-                                      f"weather_report_{now:%Y%m%d_%H%M}.pdf")
-    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
-    overrides = dict(s.split("=", 1) for s in args.stid)
-
-    # Build body pages into a temp PDF first so the title page can list page numbers;
-    # then write the title page + body. (matplotlib can't insert pages, so render twice.)
+def build_report(site: Site, args, overrides: dict[str, str], now: dt.datetime, outdir: str) -> str:
+    out = os.path.join(outdir, f"{site.file_prefix}_{now:%Y%m%d_%H%M}.pdf")
     sections = [
         ("Avalanche forecast (UAC)", lambda r: avalanche_section(r)),
         ("NWS forecast discussion", lambda r: afd_section(r)),
-        ("NWS Alta point forecast", lambda r: nws_point_section(r)),
-        ("Ensemble plumes (U of U)", lambda r: plume_section(r)),
-        ("History: NCEI / HOMR", lambda r: ncei_section(r, args.days)),
-        ("History: Alta stations", lambda r: synoptic_section(r, args.synoptic_token, args.days, overrides)),
     ]
+    for pt in site.points:
+        sections.append((f"NWS forecast: {pt.label}",
+                         lambda r, pt=pt: point_forecast_section(
+                             r, pt, f"NWS forecast: {pt.label} ({pt.elev:,} ft)")))
+    sections.append(("Ensemble plumes (U of U)",
+                     lambda r: plume_section(r, site.plume_station, site.plume_name)))
+    if site.include_ncei:
+        sections.append(("History: NCEI / HOMR", lambda r: ncei_section(r, args.days)))
+    sections.append((f"History: {site.history_label}",
+                     lambda r: station_section(r, site, args.synoptic_token, args.days, overrides)))
 
     def build(path, statuses_in=None, toc_in=None):
         statuses = []
         with PdfPages(path) as pdf:
-            rep = Report(pdf, generated=now)
+            rep = Report(pdf, generated=now, label=f"{site.title} weather report")
             if toc_in is not None:
                 rep.toc = toc_in
-                rep.save(title_page(rep, args.days, statuses_in))
+                rep.save(title_page(rep, site, args.days, statuses_in))
                 rep.toc = []
             for name, fn in sections:
-                print(f"- {name} ...", flush=True)
+                print(f"- [{site.key}] {name} ...", flush=True)
                 try:
                     statuses.append((name, fn(rep) or "ok"))
                 except Exception as e:
@@ -1137,12 +1280,40 @@ def main(argv=None):
                     error_page(rep, name, f"{type(e).__name__}: {e}", section=name)
                     statuses.append((name, f"failed: {type(e).__name__}"))
             d = pdf.infodict()
-            d["Title"] = "Alta & Salt Lake Mountains weather report"
+            d["Title"] = f"{site.title} weather report"
             d["CreationDate"] = now
         return rep.toc, statuses
 
     # Pass 1 collects the contents; pass 2 writes the final file with a title page.
-    # Pass 2 re-fetches everything, so cache HTTP responses between passes.
+    # (matplotlib can't insert pages.) HTTP responses are cached, so nothing is
+    # downloaded twice.
+    tmp = out + ".tmp.pdf"
+    toc, statuses = build(tmp)
+    os.remove(tmp)
+    build(out, statuses_in=statuses, toc_in=toc)
+    print(f"Wrote {out}\n")
+    return out
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--site", choices=["all", *SITES], default="all",
+                    help="which report to build (default: all)")
+    ap.add_argument("--outdir", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports"),
+                    help="folder for the PDFs (default: reports/ next to this script)")
+    ap.add_argument("--days", type=int, default=30, help="history window in days (default 30)")
+    ap.add_argument("--synoptic-token", default=os.environ.get("SYNOPTIC_TOKEN"),
+                    help="Synoptic Data API token (or env SYNOPTIC_TOKEN); fallback source only")
+    ap.add_argument("--stid", action="append", default=[],
+                    help="override a station ID, e.g. --stid 'ALTA - BASE=ATB' (repeatable)")
+    args = ap.parse_args(argv)
+
+    now = dt.datetime.now(TZ)
+    os.makedirs(args.outdir, exist_ok=True)
+    overrides = dict(s.split("=", 1) for s in args.stid)
+    sites = list(SITES.values()) if args.site == "all" else [SITES[args.site]]
+
+    # Both reports and both passes share the avalanche/AFD/etc. downloads.
     _cache: dict = {}
     _orig_get = requests.get
 
@@ -1154,14 +1325,9 @@ def main(argv=None):
 
     requests.get = cached_get
     try:
-        tmp = out + ".tmp.pdf"
-        toc, statuses = build(tmp)
-        os.remove(tmp)
-        build(out, statuses_in=statuses, toc_in=toc)
+        return [build_report(site, args, overrides, now, args.outdir) for site in sites]
     finally:
         requests.get = _orig_get
-    print(f"\nWrote {out}")
-    return out
 
 
 if __name__ == "__main__":

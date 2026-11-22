@@ -1,0 +1,73 @@
+# Builds the Alta and Park City reports every morning on GitHub's servers and emails
+# them. Needs these repository secrets (Settings > Secrets and variables > Actions):
+#   EMAIL_TO        where to send the reports (comma-separated for several)
+#   SMTP_USER       sending account, e.g. a Gmail address
+#   SMTP_PASSWORD   that account's app password (not its normal password)
+#   SYNOPTIC_TOKEN  optional, fallback station-data source
+# Optional repository variables for a non-Gmail sender: SMTP_HOST, SMTP_PORT.
+name: Daily weather report
+
+on:
+  schedule:
+    # GitHub cron is UTC: 14:30 UTC = 7:30 AM MST (ski season) / 8:30 AM MDT.
+    # Scheduled runs can start a few minutes (occasionally much) late.
+    - cron: "30 14 * * *"
+  workflow_dispatch: # "Run workflow" button for a manual run
+
+permissions:
+  contents: write # to commit the updated station history in data/
+
+concurrency:
+  group: daily-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install Python packages
+        run: pip install -r requirements.txt
+
+      - name: Install headless Chromium (for the weather.gov station pages)
+        run: python -m playwright install --with-deps chromium-headless-shell
+
+      - name: Build and email the reports
+        env:
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.gmail.com' }}
+          SMTP_PORT: ${{ vars.SMTP_PORT || '465' }}
+          SYNOPTIC_TOKEN: ${{ secrets.SYNOPTIC_TOKEN }}
+        run: python weather_report.py --publish-dir ""
+
+      - name: Keep the PDFs and log as a downloadable artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weather-reports
+          path: reports/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Save the station history for tomorrow's run
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No new station data"
+          else
+            git commit -m "Update station history ($(date -u +%Y-%m-%d))"
+            git pull --rebase
+            git push
+          fi

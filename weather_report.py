@@ -1420,6 +1420,9 @@ def main(argv=None):
     ap.add_argument("--publish-dir", default=PUBLISH_DIR,
                     help="after a full run, copy the PDFs here and delete every other file "
                          "in it (default: the Ski Patrol Google Drive folder; \"\" = off)")
+    ap.add_argument("--email-to", default=os.environ.get("EMAIL_TO"),
+                    help="email the PDFs to these comma-separated addresses (or env EMAIL_TO); "
+                         "needs SMTP_USER and SMTP_PASSWORD, see email_reports()")
     ap.add_argument("--days", type=int, default=30, help="history window in days (default 30)")
     ap.add_argument("--synoptic-token", default=os.environ.get("SYNOPTIC_TOKEN"),
                     help="Synoptic Data API token (or env SYNOPTIC_TOKEN); fallback source only")
@@ -1453,7 +1456,58 @@ def main(argv=None):
     elif args.publish_dir:
         print(f"Not publishing: --site {args.site} builds only one report, and publishing "
               f"would delete the other one from {args.publish_dir}")
+    if args.email_to:
+        email_reports(outputs, args.email_to, now)
     return outputs
+
+
+def email_reports(pdfs: list[str], to: str, now: dt.datetime):
+    """Email the PDFs as attachments with the subject "YYYYMMDD Utah Avy Weather Report".
+
+    SMTP settings come from environment variables (never from the repo):
+      SMTP_HOST      default smtp.gmail.com
+      SMTP_PORT      default 465 (SSL); 587 uses STARTTLS
+      SMTP_USER      login, usually the sending address
+      SMTP_PASSWORD  for Gmail, an app password (Google Account > Security > App passwords)
+      EMAIL_FROM     optional, defaults to SMTP_USER
+    `to` may hold several addresses separated by commas. Raises on failure so a
+    scheduled run shows up as failed."""
+    import smtplib
+    from email.message import EmailMessage
+
+    host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+    port = int(os.environ.get("SMTP_PORT", "465"))
+    user, password = os.environ.get("SMTP_USER"), os.environ.get("SMTP_PASSWORD")
+    if not (user and password):
+        raise RuntimeError("Email requested but SMTP_USER / SMTP_PASSWORD aren't set")
+    recipients = [a.strip() for a in to.split(",") if a.strip()]
+
+    msg = EmailMessage()
+    msg["Subject"] = f"{now:%Y%m%d} Utah Avy Weather Report"
+    msg["From"] = os.environ.get("EMAIL_FROM", user)
+    msg["To"] = ", ".join(recipients)
+    names = [os.path.basename(p) for p in pdfs if os.path.isfile(p)]
+    msg.set_content(
+        f"Utah avalanche & mountain weather reports generated {now:%A, %B %d %Y at %H:%M %Z}.\n\n"
+        + "\n".join(f"  - {n}" for n in names)
+        + "\n\nSources: Utah Avalanche Center, NWS Salt Lake City, University of Utah, "
+          "NCEI and weather.gov station observations.\n")
+    for p in pdfs:
+        if os.path.isfile(p):
+            with open(p, "rb") as f:
+                msg.add_attachment(f.read(), maintype="application", subtype="pdf",
+                                   filename=os.path.basename(p))
+
+    if port == 465:
+        with smtplib.SMTP_SSL(host, port, timeout=60) as s:
+            s.login(user, password)
+            s.send_message(msg)
+    else:
+        with smtplib.SMTP(host, port, timeout=60) as s:
+            s.starttls()
+            s.login(user, password)
+            s.send_message(msg)
+    print(f"Emailed {len(names)} reports to {len(recipients)} recipient(s): {msg['Subject']}")
 
 
 def publish(pdfs: list[str], dest: str):

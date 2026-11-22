@@ -1,2 +1,3 @@
 # Generated output: report PDFs and the scheduled task's log (the script recreates the folder)
 reports/
+__pycache__/

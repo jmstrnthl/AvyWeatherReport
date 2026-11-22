@@ -1675,6 +1675,9 @@ def main(argv=None):
     ap.add_argument("--publish-dir", default=PUBLISH_DIR,
                     help="after a full run, copy the PDFs here and delete every other file "
                          "in it (default: the Ski Patrol Google Drive folder; \"\" = off)")
+    ap.add_argument("--site-dir", default="",
+                    help="also write a small web page here: <key>.pdf (alta.pdf, pc.pdf) at fixed "
+                         "names plus index.html linking them; used for GitHub Pages")
     ap.add_argument("--email-to", default=os.environ.get("EMAIL_TO"),
                     help="email the PDFs to these comma-separated addresses (or env EMAIL_TO); "
                          "needs SMTP_USER and SMTP_PASSWORD, see email_reports()")
@@ -1711,9 +1714,73 @@ def main(argv=None):
     elif args.publish_dir:
         print(f"Not publishing: --site {args.site} builds only one report, and publishing "
               f"would delete the other one from {args.publish_dir}")
+    if args.site_dir:
+        build_site(outputs, args.site_dir, now)
     if args.email_to:
         email_reports(outputs, args.email_to, now)
     return outputs
+
+
+def build_site(pdfs: list[str], site_dir: str, now: dt.datetime):
+    """Copy each report to a fixed name (alta.pdf, pc.pdf) and write index.html linking
+    them, so a bookmarked link always gets the newest report."""
+    import html as htmlmod
+
+    os.makedirs(site_dir, exist_ok=True)
+    rows = []
+    for p in pdfs:
+        if not os.path.isfile(p):
+            continue
+        site = next((s for s in SITES.values() if os.path.basename(p).startswith(s.file_prefix)), None)
+        name = f"{site.key}.pdf" if site else os.path.basename(p)
+        shutil.copy2(p, os.path.join(site_dir, name))
+        title = site.title if site else name
+        kb = os.path.getsize(p) // 1024
+        # ?v= makes browsers fetch the new file instead of a cached copy
+        rows.append(f'<a class="card" href="{name}?v={now:%Y%m%d%H%M}">'
+                    f'<span class="t">{htmlmod.escape(title)}</span>'
+                    f'<span class="s">{name} · {kb:,} KB</span></a>')
+    stamp = f"{now:%A, %B %d %Y at %H:%M %Z}".replace(" 0", " ")
+    page = f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Utah Avy Weather Reports</title>
+<style>
+  :root {{ --bg:#f6f7f9; --card:#ffffff; --text:#1d2430; --muted:#5d6675; --line:#dde2e8; --accent:#2e86ab; }}
+  @media (prefers-color-scheme: dark) {{
+    :root {{ --bg:#14181e; --card:#1d232b; --text:#e8ecf1; --muted:#9aa4b1; --line:#2c343e; --accent:#5fb3d6; }}
+  }}
+  * {{ box-sizing: border-box; }}
+  body {{ margin:0; background:var(--bg); color:var(--text);
+         font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }}
+  main {{ max-width:560px; margin:0 auto; padding:40px 16px; }}
+  h1 {{ font-size:1.5rem; margin:0 0 4px; }}
+  .when {{ color:var(--muted); margin:0 0 24px; font-size:.95rem; }}
+  .card {{ display:flex; flex-direction:column; gap:2px; padding:16px 18px; margin:0 0 12px;
+          background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent);
+          border-radius:8px; color:inherit; text-decoration:none; }}
+  .card:hover {{ border-color:var(--accent); }}
+  .t {{ font-weight:600; font-size:1.05rem; }}
+  .s {{ color:var(--muted); font-size:.85rem; }}
+  footer {{ color:var(--muted); font-size:.8rem; margin-top:28px; }}
+</style>
+</head>
+<body>
+<main>
+  <h1>Utah Avy Weather Reports</h1>
+  <p class="when">Generated {htmlmod.escape(stamp)}</p>
+  {"".join(rows)}
+  <footer>Updated twice a day (about 7:30 AM and 7:30 PM Mountain time). Sources: Utah Avalanche
+  Center, NWS Salt Lake City, University of Utah, NCEI and weather.gov station observations.</footer>
+</main>
+</body>
+</html>
+"""
+    with open(os.path.join(site_dir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(page)
+    print(f"Wrote web page to {site_dir}")
 
 
 def email_reports(pdfs: list[str], to: str, now: dt.datetime):

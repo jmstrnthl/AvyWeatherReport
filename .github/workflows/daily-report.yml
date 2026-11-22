@@ -1,5 +1,10 @@
-# Builds the Alta and Park City reports twice a day on GitHub's servers and emails
-# them. Needs these repository secrets (Settings > Secrets and variables > Actions):
+# Builds the Alta and Park City reports twice a day on GitHub's servers, publishes the
+# newest ones at fixed links on GitHub Pages and emails them:
+#   https://jmstrnthl.github.io/AvyWeatherReport/          (index page)
+#   https://jmstrnthl.github.io/AvyWeatherReport/alta.pdf
+#   https://jmstrnthl.github.io/AvyWeatherReport/pc.pdf
+# Pages must be set to "GitHub Actions" under Settings > Pages.
+# Email needs these repository secrets (Settings > Secrets and variables > Actions):
 #   EMAIL_TO        where to send the reports (comma-separated for several)
 #   SMTP_USER       sending account, e.g. a Gmail address
 #   SMTP_PASSWORD   that account's app password (not its normal password)
@@ -40,7 +45,7 @@ jobs:
       - name: Install headless Chromium (for the weather.gov station pages)
         run: python -m playwright install --with-deps chromium-headless-shell
 
-      - name: Build and email the reports
+      - name: Build the reports, write the web page, and email them
         env:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
@@ -48,7 +53,14 @@ jobs:
           SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.gmail.com' }}
           SMTP_PORT: ${{ vars.SMTP_PORT || '465' }}
           SYNOPTIC_TOKEN: ${{ secrets.SYNOPTIC_TOKEN }}
-        run: python weather_report.py --publish-dir ""
+        run: python weather_report.py --publish-dir "" --site-dir _site
+
+      # Published even if only the email failed (the page is written before emailing)
+      - name: Package the web page for GitHub Pages
+        if: always() && hashFiles('_site/index.html') != ''
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site/
 
       - name: Keep the PDFs and log as a downloadable artifact
         if: always()
@@ -72,3 +84,18 @@ jobs:
             git pull --rebase
             git push
           fi
+
+  pages:
+    # Puts the newest reports at the fixed links above
+    needs: report
+    if: always() && needs.report.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

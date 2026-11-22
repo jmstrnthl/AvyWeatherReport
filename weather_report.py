@@ -52,6 +52,7 @@ import datetime as dt
 import io
 import os
 import re
+import shutil
 import sys
 import textwrap
 import traceback
@@ -88,6 +89,9 @@ SYNOPTIC_BASE = "https://api.synopticdata.com/v2"
 NWS_API = "https://api.weather.gov"
 WRH_TIMESERIES = "https://www.weather.gov/wrh/timeseries"
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+# After a full run (both reports), the PDFs are copied here and every other file
+# directly in this folder is deleted. Use --publish-dir "" to turn this off.
+PUBLISH_DIR = r"G:\My Drive\02 Ski Patrol\01 WeatherReports"
 
 
 @dataclass
@@ -1259,6 +1263,9 @@ def main(argv=None):
                     help="which report to build (default: all)")
     ap.add_argument("--outdir", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports"),
                     help="folder for the PDFs (default: reports/ next to this script)")
+    ap.add_argument("--publish-dir", default=PUBLISH_DIR,
+                    help="after a full run, copy the PDFs here and delete every other file "
+                         "in it (default: the Ski Patrol Google Drive folder; \"\" = off)")
     ap.add_argument("--days", type=int, default=30, help="history window in days (default 30)")
     ap.add_argument("--synoptic-token", default=os.environ.get("SYNOPTIC_TOKEN"),
                     help="Synoptic Data API token (or env SYNOPTIC_TOKEN); fallback source only")
@@ -1283,9 +1290,43 @@ def main(argv=None):
 
     requests.get = cached_get
     try:
-        return [build_report(site, args, overrides, now, args.outdir) for site in sites]
+        outputs = [build_report(site, args, overrides, now, args.outdir) for site in sites]
     finally:
         requests.get = _orig_get
+
+    if args.publish_dir and args.site == "all":
+        publish(outputs, args.publish_dir)
+    elif args.publish_dir:
+        print(f"Not publishing: --site {args.site} builds only one report, and publishing "
+              f"would delete the other one from {args.publish_dir}")
+    return outputs
+
+
+def publish(pdfs: list[str], dest: str):
+    """Copy the new reports into `dest`, then delete every other file directly in it.
+    Copying first means a failure never leaves the folder empty. Subfolders are left
+    alone. On Google Drive, deleted files go to the Drive trash."""
+    if not all(os.path.isfile(p) for p in pdfs):
+        print(f"Not publishing: a report is missing, so {dest} was left as it was")
+        return
+    if not os.path.isdir(dest):
+        print(f"Not publishing: {dest} doesn't exist (is Google Drive running?)")
+        return
+    keep = set()
+    for p in pdfs:
+        shutil.copy2(p, os.path.join(dest, os.path.basename(p)))
+        keep.add(os.path.basename(p))
+    removed = []
+    for name in os.listdir(dest):
+        path = os.path.join(dest, name)
+        if name not in keep and os.path.isfile(path):
+            try:
+                os.remove(path)
+                removed.append(name)
+            except OSError as e:
+                print(f"  couldn't delete {path}: {e}")
+    print(f"Published {len(keep)} reports to {dest}"
+          + (f"; deleted {len(removed)} old file(s): {', '.join(removed)}" if removed else ""))
 
 
 if __name__ == "__main__":

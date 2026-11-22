@@ -415,14 +415,13 @@ def point_forecast_section(rep: Report, pt: Point, section: str):
     title = f"NWS Point Forecast — {pt.label} (elev {pt.elev:,} ft)"
     where = f"{pt.lat}, {pt.lon}" + (f"  ·  NWS grid elevation {grid_elev:,} ft" if grid_elev else "")
     forecast_charts_page(rep, fc, title, where, section)
-    forecast_table_pages(rep, fc, title, where, pt.url)
 
 
 def forecast_charts_page(rep: Report, fc: pd.DataFrame, title: str, where: str, section: str):
     fig, axes = plt.subplots(4, 1, figsize=PAGE, sharex=True,
-                             gridspec_kw=dict(height_ratios=[3, 2.4, 1.6, 2], hspace=0.18,
-                                              left=0.09, right=0.95, top=0.9, bottom=0.07))
-    header(fig, title + " — hourly charts",
+                             gridspec_kw=dict(height_ratios=[3, 2.4, 1.6, 2], hspace=0.2,
+                                              left=0.09, right=0.95, top=0.905, bottom=0.315))
+    header(fig, title,
            f"{where}  ·  {fc.index[0]:%a %b %d %H:%M} – {fc.index[-1]:%a %b %d %H:%M %Z}")
     ax = axes[0]
     ax.plot(fc.index, fc.temp, color=C_WARM, lw=1.8, label="Temperature")
@@ -462,6 +461,7 @@ def forecast_charts_page(rep: Report, fc: pd.DataFrame, title: str, where: str, 
     ax.xaxis.set_minor_locator(mdates.HourLocator(byhour=[6, 12, 18], tz=TZ))
     for a in axes:
         a.grid(True, which="major", axis="x", color="#bbbbbb")
+    draw_daily_summary(fig, fc, top=0.255)
     rep.save(fig, section)
 
 
@@ -494,18 +494,13 @@ def _fmt(v, nd=0):
     return "" if v is None or (isinstance(v, float) and np.isnan(v)) else f"{v:.{nd}f}"
 
 
-def forecast_table_pages(rep: Report, fc: pd.DataFrame, title: str, where: str, url: str):
-    """Daily summary + hourly table, built from the NWS tabular forecast. Hourly for the
-    first 48 hours, then every 3 hours to the end of the forecast."""
-    precip = [(k, lbl) for k, lbl in PRECIP_COLS
-              if k in fc and fc[k].astype(str).str.strip().ne("").any()
-              or k in ("rain", "snow")]
-
-    # --- daily summary rows
+def daily_summary_rows(fc: pd.DataFrame) -> list[list[str]]:
+    """One row per forecast day: high/low, max wind and gust, max PoP, mean sky cover
+    and the precip types with their NWS chance wording."""
     daily = fc.groupby(fc.index.date).agg(
         high=("temp", "max"), low=("temp", "min"), wind_max=("wind", "max"),
         gust_max=("gust", "max"), pop_max=("pop", "max"), sky_mean=("sky", "mean"))
-    sum_rows = []
+    rows = []
     for d, r in daily.iterrows():
         day = fc[fc.index.date == d]
         kinds = []
@@ -513,62 +508,25 @@ def forecast_table_pages(rep: Report, fc: pd.DataFrame, title: str, where: str, 
             if k in day and day[k].astype(str).str.strip().ne("").any():
                 vals = sorted(set(v for v in day[k] if v))
                 kinds.append(f"{lbl.lower()} ({'/'.join(vals)})")
-        sum_rows.append([pd.Timestamp(d).strftime("%a %b %d"), _fmt(r.high), _fmt(r.low),
-                         _fmt(r.wind_max), _fmt(r.gust_max) or "—", _fmt(r.pop_max),
-                         _fmt(r.sky_mean), ", ".join(kinds) or "—"])
+        rows.append([pd.Timestamp(d).strftime("%a %b %d"), _fmt(r.high), _fmt(r.low),
+                     _fmt(r.wind_max), _fmt(r.gust_max) or "—", _fmt(r.pop_max),
+                     _fmt(r.sky_mean), ", ".join(kinds) or "—"])
+    return rows
 
-    # --- hourly rows: every hour for 48 h, then every 3 h
-    t0 = fc.index[0]
-    sel = fc[(fc.index < t0 + pd.Timedelta(hours=48)) | (fc.index.hour % 3 == 0)]
-    hdr = (["Day", "Hour", "Temp °F", "Dew pt", "Wind chill", "Wind mph", "Dir", "Gust",
-            "Sky %", "PoP %", "RH %"] + [lbl for _, lbl in precip])
-    widths = [0.09, 0.06, 0.07, 0.065, 0.075, 0.075, 0.055, 0.06, 0.06, 0.06, 0.06] + \
-             [0.065] * len(precip)
-    rows, shade, bold, prev_day = [], [], [], None
-    for t, r in sel.iterrows():
-        new_day = t.date() != prev_day
-        prev_day = t.date()
-        rows.append([t.strftime("%a %b %d") if new_day else "",
-                     t.strftime("%-I %p") if os.name != "nt" else t.strftime("%#I %p"),
-                     _fmt(r.temp), _fmt(r.dewpt), _fmt(r.chill), _fmt(r.wind),
-                     r.wdir if isinstance(r.wdir, str) else "", _fmt(r.gust),
-                     _fmt(r.sky), _fmt(r["pop"]), _fmt(r.rh)]
-                    + [(r[k] if k in r and isinstance(r[k], str) else "") for k, _ in precip])
-        shade.append(t.dayofyear % 2 == 0)
-        bold.append(new_day)
 
-    row_h = 0.0138  # figure fraction per table row on a landscape page
-    first_n = int(0.50 / row_h) - 1
-    rest_n = int(0.80 / row_h) - 1
-    chunks = [(0, first_n)]
-    while chunks[-1][1] < len(rows):
-        s = chunks[-1][1]
-        chunks.append((s, s + rest_n))
-    note = ("Wind in mph. Precip chances use NWS wording: SChc = slight chance, Chc = chance, "
-            "Lkly = likely, Ocnl = occasional, Def = definite.")
-    for i, (a, b) in enumerate(chunks):
-        part = rows[a:b]
-        if not part:
-            break
-        fig = plt.figure(figsize=LAND)
-        header(fig, title + (" — forecast table" if i == 0 else f" — forecast table (cont. {i + 1})"),
-               f"{where}  ·  {url}")
-        top = 0.90
-        if i == 0:
-            fig.text(0.04, top, "Daily summary", fontsize=10, weight="bold", va="top")
-            h = row_h * 1.25 * (len(sum_rows) + 1)
-            ax = fig.add_axes([0.04, top - 0.025 - h, 0.92, h])
-            _draw_table(ax, ["Day", "High °F", "Low °F", "Max wind", "Max gust", "Max PoP %",
-                             "Sky %", "Precip type (chance)"], sum_rows,
-                        [0.1, 0.07, 0.07, 0.08, 0.08, 0.08, 0.06, 0.46], fontsize=7.5)
-            top = top - 0.025 - h - 0.035
-            fig.text(0.04, top + 0.022, "Hourly forecast (every hour for 48 h, then every 3 h)",
-                     fontsize=10, weight="bold", va="top")
-        h = row_h * (len(part) + 1)
-        ax = fig.add_axes([0.04, top - h, 0.92, h])
-        _draw_table(ax, hdr, part, widths, fontsize=6.6, shade=shade[a:b], bold=bold[a:b])
-        fig.text(0.04, 0.035, note, fontsize=7, color=C_MUTED)
-        rep.save(fig)
+def draw_daily_summary(fig, fc: pd.DataFrame, top: float):
+    """Daily summary table across the page, starting just below figure height `top`."""
+    rows = daily_summary_rows(fc)
+    fig.text(0.06, top, "Daily summary", fontsize=10, weight="bold", va="top")
+    h = 0.019 * (len(rows) + 1)
+    ax = fig.add_axes([0.06, top - 0.022 - h, 0.89, h])
+    _draw_table(ax, ["Day", "High °F", "Low °F", "Max wind", "Max gust", "Max PoP %",
+                     "Sky %", "Precip type (chance)"], rows,
+                [0.12, 0.08, 0.08, 0.09, 0.09, 0.1, 0.07, 0.37], fontsize=7.2)
+    fig.text(0.06, top - 0.022 - h - 0.016,
+             "Wind in mph. Precip chances use NWS wording: SChc = slight chance, Chc = chance, "
+             "Lkly = likely, Ocnl = occasional, Def = definite.", fontsize=6.8, color=C_MUTED,
+             va="top")
 
 
 # --------------------------------------------------------------------------- forecast: plumes

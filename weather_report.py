@@ -135,6 +135,7 @@ SITES = {
     "alta": Site(
         key="alta", title="Alta & Little Cottonwood", file_prefix="alta_weather_report",
         points=[Point("Alta Base", 8560, 40.5846, -111.6213),
+                Point("Alta-Collins Top", 9400, 40.572, -111.631),
                 Point("Mount Superior", 10318, 40.592, -111.667)],
         plume_station="CLN", plume_name="Alta-Collins",
         # Station IDs are the same on weather.gov, Synoptic/MesoWest and the NWS API.
@@ -155,13 +156,14 @@ SITES = {
         ncei_ghcnd="USC00426644"),   # PARK CITY co-op, 6,900 ft
     "bcc": Site(
         key="bcc", title="Big Cottonwood Canyon", file_prefix="bcc_weather_report",
-        points=[Point("Kessler", 9400, 40.626, -111.669),
-                Point("Spruces", 7400, 40.643, -111.637),
+        # forecasts and stations in increasing elevation
+        points=[Point("Spruces", 7400, 40.643, -111.637),
+                Point("Kessler", 9400, 40.626, -111.669),
                 Point("Flagstaff", 10318, 40.599, -111.67)],
         plume_station="PKCU1", plume_name="Silver Lake Brighton",
-        stations=[("SOLITUDE HONEYCOMB PEAK", 10488, "SOLHP"),
+        stations=[("SPRUCES", 7400, "SPC"),
                   ("REYNOLDS PEAK", 9400, "REY"),
-                  ("SPRUCES", 7400, "SPC")],
+                  ("SOLITUDE HONEYCOMB PEAK", 10488, "SOLHP")],
         history_label="Big Cottonwood stations",
         ncei_ghcnd="USC00427846"),   # SILVER LAKE BRIGHTON co-op
 }
@@ -495,15 +497,20 @@ def _avy_tally(values, options):
 
 
 # Problem colors for the per-avalanche plot. Fixed per problem (not by this week's
-# ranking) so a color always means the same thing; only three hues because more aren't
-# reliably distinguishable as scattered dots, so the rarer problems share "Other".
-# Each also has its own marker shape, so the plot still reads in grayscale.
+# ranking) so a color always means the same thing. These six were chosen so every pair
+# stays distinct for normal vision (OKLab Delta E >= 15.6); under color blindness some
+# pairs get close (worst ~7), so each problem also has its own marker shape. No seventh
+# color clears that bar, so Normal Caution and any problem name not listed here share
+# dark gray and are told apart by shape.
 PROBLEM_STYLE = {
-    "Persistent Weak Layer": ("#2a78d6", "o"),
-    "Wind Drifted Snow": ("#eb6834", "s"),
-    "New Snow": ("#1baf7a", "^"),
-    "Other problem": ("#555555", "D"),
-    "No problem reported": ("#8f8f8f", "o"),  # drawn as an unfilled ring
+    "Persistent Weak Layer": ("#2a78d6", "o"),   # blue circle
+    "Wind Drifted Snow": ("#e34948", "s"),       # red square
+    "New Snow": ("#1baf7a", "^"),                # aqua triangle
+    "Cornice": ("#eda100", "p"),                 # yellow pentagon
+    "Glide": ("#008300", "v"),                   # green down-triangle
+    "Normal Caution": ("#555555", "D"),          # dark gray diamond
+    "Other problem": ("#555555", "X"),           # dark gray X
+    "No problem reported": ("#8f8f8f", "o"),     # drawn as an unfilled ring
 }
 E_TOP, E_BOTTOM = 13000, 4000
 
@@ -535,7 +542,10 @@ def _problem_of(a) -> str:
     if not probs:
         return "No problem reported"
     first = probs[0]  # an avalanche listing several problems is shown by the first
-    return first if first in PROBLEM_STYLE else "Other problem"
+    for name in PROBLEM_STYLE:  # tolerate small wording differences, e.g. "Cornice Fall"
+        if name.lower() in first.lower() or first.lower() in name.lower():
+            return name
+    return "Other problem"
 
 
 def avalanche_activity_section(rep: Report, days: int = 7):
@@ -612,11 +622,11 @@ def avalanche_activity_section(rep: Report, days: int = 7):
                           markeredgecolor=PROBLEM_STYLE[p][0] if p == "No problem reported" else "white",
                           label=f"{p} ({counts.get(p, 0)})")
                for p in PROBLEM_STYLE]
-    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.805, 0.8), fontsize=7,
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.805, 0.82), fontsize=7,
                frameon=False, title="Avalanche problem", title_fontsize=7.5, alignment="left",
-               labelspacing=0.9, handletextpad=0.5)
-    fig.text(0.81, 0.53, "Other problem = cornice, glide,\nnormal caution, etc. An avalanche\n"
-                         "listing several problems is\nshown by the first one.",
+               labelspacing=0.75, handletextpad=0.5)
+    fig.text(0.81, 0.53, "Other problem = any problem not\nlisted above. An avalanche listing\n"
+                         "several problems is shown by\nthe first one.",
              fontsize=6.3, color=C_MUTED, va="top")
 
     if not av:

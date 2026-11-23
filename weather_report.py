@@ -494,6 +494,50 @@ def _avy_tally(values, options):
     return [(o, counts.get(o, 0)) for o in options + extra], unreported
 
 
+# Problem colors for the per-avalanche plot. Fixed per problem (not by this week's
+# ranking) so a color always means the same thing; only three hues because more aren't
+# reliably distinguishable as scattered dots, so the rarer problems share "Other".
+# Each also has its own marker shape, so the plot still reads in grayscale.
+PROBLEM_STYLE = {
+    "Persistent Weak Layer": ("#2a78d6", "o"),
+    "Wind Drifted Snow": ("#eb6834", "s"),
+    "New Snow": ("#1baf7a", "^"),
+    "Other problem": ("#555555", "D"),
+    "No problem reported": ("#8f8f8f", "o"),  # drawn as an unfilled ring
+}
+E_TOP, E_BOTTOM = 13000, 4000
+
+
+def _aspect_axes(fig, rect, title):
+    """Polar aspect/elevation axes: N at top, clockwise, 13,000 ft at the centre."""
+    ax = fig.add_axes(rect, projection="polar")
+    ax.set_theta_zero_location("N")
+    ax.set_theta_direction(-1)
+    ax.set_ylim(0, E_TOP - E_BOTTOM)
+    ring_elevs = list(range(12000, E_BOTTOM - 1, -1000))
+    ax.set_yticks([E_TOP - e for e in ring_elevs])
+    ax.set_yticklabels([f"{e // 1000}k" if e % 2000 == 0 else "" for e in ring_elevs],
+                       fontsize=6, color=C_MUTED)
+    ax.set_rlabel_position(202.5)
+    ax.set_xticks(np.deg2rad(list(ASPECT_DEG.values())),
+                  ["N", "NE", "E", "SE", "S", "SW", "W", "NW"], fontsize=8.5)
+    ax.tick_params(axis="x", pad=-1)
+    ax.grid(color="#cfcfcf", lw=0.7)
+    for e in (8000, 10000, 12000):  # emphasise every 2,000 ft
+        ax.plot(np.linspace(0, 2 * np.pi, 200), [E_TOP - e] * 200, color="#a8a8a8", lw=1.1, zorder=1)
+    ax.spines["polar"].set_color("#8c8c8c")
+    ax.set_title(title, fontsize=10, weight="bold", pad=12)
+    return ax
+
+
+def _problem_of(a) -> str:
+    probs = [p for p in (a.get("avalancheProblem") or []) if p]
+    if not probs:
+        return "No problem reported"
+    first = probs[0]  # an avalanche listing several problems is shown by the first
+    return first if first in PROBLEM_STYLE else "Other problem"
+
+
 def avalanche_activity_section(rep: Report, days: int = 7):
     av, start, end = fetch_avalanches(days)
     n = len(av)
@@ -502,103 +546,114 @@ def avalanche_activity_section(rep: Report, days: int = 7):
            f"{n} avalanche{'s' if n != 1 else ''} reported to the Utah Avalanche Center, "
            f"{start:%b %d} – {end:%b %d %Y}  ·  {UAC_EXPLORER}")
 
-    # ---- aspect / elevation: N at top, clockwise; 13,000 ft at the centre
-    e_top, e_bottom = 13000, 4000
-    ax = fig.add_axes([0.045, 0.13, 0.34, 0.66], projection="polar")
-    ax.set_theta_zero_location("N")
-    ax.set_theta_direction(-1)
-    ax.set_ylim(0, e_top - e_bottom)
-    ring_elevs = list(range(12000, e_bottom - 1, -1000))
-    ax.set_yticks([e_top - e for e in ring_elevs])
-    ax.set_yticklabels([f"{e // 1000}k" if e % 2000 == 0 else "" for e in ring_elevs],
-                       fontsize=6.5, color=C_MUTED)
-    ax.set_rlabel_position(202.5)
-    ax.set_xticks(np.deg2rad(list(ASPECT_DEG.values())),
-                  ["N", "NE", "E", "SE", "S", "SW", "W", "NW"], fontsize=9)
-    ax.grid(color="#cfcfcf", lw=0.7)
-    for e in (8000, 10000, 12000):  # emphasise every 2,000 ft
-        ax.plot(np.linspace(0, 2 * np.pi, 200), [e_top - e] * 200, color="#a8a8a8", lw=1.1, zorder=1)
-    ax.spines["polar"].set_color("#8c8c8c")
-    ax.set_title("Avalanches by Aspect and Elevation", fontsize=10.5, weight="bold", pad=14)
+    placed = [a for a in av if a.get("aspect") in ASPECT_DEG and a.get("elevation")
+              and E_BOTTOM <= a["elevation"] <= E_TOP]
+    unplotted = n - len(placed)
 
-    # one dot per aspect x 1,000-ft band: area = avalanche count, color = mean crown depth
-    area, c_unknown = 75, "#c4c4c4"
-    groups, unplotted = {}, 0
-    for a in av:
-        asp, el = a.get("aspect"), a.get("elevation")
-        if asp not in ASPECT_DEG or not el or not (e_bottom <= el <= e_top):
-            unplotted += 1
-            continue
-        band = min(int(el // 1000) * 1000, e_top - 1000)
+    # ---- plot 1: one dot per aspect x 1,000-ft band, area = count, color = mean depth
+    ax = _aspect_axes(fig, [0.035, 0.47, 0.29, 0.375], "Avalanches by Aspect and Elevation")
+    area, c_unknown = 60, "#c4c4c4"
+    groups = {}
+    for a in placed:
+        band = min(int(a["elevation"] // 1000) * 1000, E_TOP - 1000)
         try:
             depth = float(a.get("depthKey") or 0)
         except ValueError:
             depth = 0
-        g = groups.setdefault((asp, band), {"n": 0, "depths": []})
+        g = groups.setdefault((a["aspect"], band), {"n": 0, "depths": []})
         g["n"] += 1
         if depth > 0:
             g["depths"].append(depth)
     for (asp, band), g in sorted(groups.items(), key=lambda kv: -kv[1]["n"]):
-        r = e_top - (band + 500)
+        r = E_TOP - (band + 500)
         color = DEPTH_CMAP(DEPTH_NORM(np.mean(g["depths"]))) if g["depths"] else c_unknown
         ax.scatter(np.deg2rad(ASPECT_DEG[asp]), r, s=area * g["n"], color=color, alpha=0.9,
                    edgecolor="white", lw=1.0, zorder=3)
         if g["n"] > 1:
             ax.text(np.deg2rad(ASPECT_DEG[asp]), r, str(g["n"]), ha="center", va="center",
-                    fontsize=7, weight="bold", color="white" if g["depths"] else C_TEXT, zorder=4)
-    if not av:
-        ax.text(0, 0, "No avalanches reported", ha="center", va="center", fontsize=9, color=C_MUTED)
-
-    note = ("Rings: elevation, 13,000 ft at the centre to 4,000 ft at the edge\n"
-            "one dot per aspect and 1,000-ft band")
-    if unplotted:
-        note += f" · {unplotted} without aspect/elevation not shown"
-    fig.text(0.215, 0.115, note, ha="center", fontsize=7, color=C_MUTED)
-    for i, k in enumerate((1, 2, 4)):  # size key
-        fig.add_artist(plt.Line2D([0.06 + i * 0.045], [0.075], marker="o", ls="",
-                                  markersize=np.sqrt(area * k), color="#9a9a9a",
-                                  markeredgecolor="white", transform=fig.transFigure))
-        fig.text(0.06 + i * 0.045 + 0.013 + 0.003 * k, 0.075, str(k), va="center", fontsize=7,
-                 color=C_TEXT)
-    fig.text(0.06, 0.035, "avalanches per dot", fontsize=6.5, color=C_MUTED)
-    cax = fig.add_axes([0.235, 0.07, 0.13, 0.014])  # depth color key
-    cb = fig.colorbar(plt.cm.ScalarMappable(norm=DEPTH_NORM, cmap=DEPTH_CMAP), cax=cax,
-                      orientation="horizontal")
+                    fontsize=6.5, weight="bold", color="white" if g["depths"] else C_TEXT, zorder=4)
+    # keys to the right of plot 1: dot size = count, color = average crown depth
+    kx = 0.345
+    fig.text(kx, 0.79, "Avalanches per dot", fontsize=7, weight="bold", color=C_TEXT)
+    for i, k in enumerate((1, 2, 4)):
+        y = 0.755 - i * 0.04
+        fig.add_artist(plt.Line2D([kx + 0.012], [y], marker="o", ls="", markersize=np.sqrt(area * k),
+                                  color="#9a9a9a", markeredgecolor="white", transform=fig.transFigure))
+        fig.text(kx + 0.035, y, str(k), va="center", fontsize=7, color=C_TEXT)
+    fig.text(kx, 0.62, "Avg crown depth", fontsize=7, weight="bold", color=C_TEXT)
+    cax = fig.add_axes([kx + 0.004, 0.5, 0.012, 0.105])
+    cb = fig.colorbar(plt.cm.ScalarMappable(norm=DEPTH_NORM, cmap=DEPTH_CMAP), cax=cax)
     cb.set_ticks([0, 12, 24, 36], labels=['0"', '12"', '24"', '36"+'])
     cb.ax.tick_params(labelsize=6, length=2, pad=1)
     cb.outline.set_linewidth(0.4)
-    fig.text(0.235, 0.035, "average crown depth  ·  ", fontsize=6.5, color=C_MUTED)
-    fig.add_artist(plt.Line2D([0.343], [0.039], marker="o", ls="", markersize=5, color=c_unknown,
+    fig.add_artist(plt.Line2D([kx + 0.01], [0.475], marker="o", ls="", markersize=5, color=c_unknown,
                               transform=fig.transFigure))
-    fig.text(0.35, 0.035, "unknown", fontsize=6.5, color=C_MUTED)
+    fig.text(kx + 0.022, 0.475, "unknown", va="center", fontsize=6.5, color=C_MUTED)
 
-    # ---- four bar charts, 2 x 2
+    # ---- plot 2: every avalanche as its own dot, colored/shaped by its problem
+    bx = _aspect_axes(fig, [0.5, 0.47, 0.29, 0.375], "Each Avalanche by Problem")
+    counts = {}
+    slots = {}  # nudge avalanches at the same aspect and similar elevation apart
+    for a in sorted(placed, key=lambda a: a["elevation"]):
+        prob = _problem_of(a)
+        counts[prob] = counts.get(prob, 0) + 1
+        key = (a["aspect"], round(a["elevation"] / 250))
+        k = slots.get(key, 0)
+        slots[key] = k + 1
+        offset = (k + 1) // 2 * 6 * (1 if k % 2 else -1)  # 0, +6, -6, +12, ... degrees
+        color, marker = PROBLEM_STYLE[prob]
+        hollow = prob == "No problem reported"
+        bx.scatter(np.deg2rad(ASPECT_DEG[a["aspect"]] + offset), E_TOP - a["elevation"], s=48,
+                   marker=marker, facecolor="none" if hollow else color,
+                   edgecolor=color if hollow else "white", lw=1.3 if hollow else 0.8, alpha=0.95,
+                   zorder=4 if hollow else 3)  # see-through rings on top hide nothing
+    handles = [plt.Line2D([], [], ls="", marker=PROBLEM_STYLE[p][1], markersize=7,
+                          markerfacecolor="none" if p == "No problem reported" else PROBLEM_STYLE[p][0],
+                          markeredgecolor=PROBLEM_STYLE[p][0] if p == "No problem reported" else "white",
+                          label=f"{p} ({counts.get(p, 0)})")
+               for p in PROBLEM_STYLE]
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.805, 0.8), fontsize=7,
+               frameon=False, title="Avalanche problem", title_fontsize=7.5, alignment="left",
+               labelspacing=0.9, handletextpad=0.5)
+    fig.text(0.81, 0.53, "Other problem = cornice, glide,\nnormal caution, etc. An avalanche\n"
+                         "listing several problems is\nshown by the first one.",
+             fontsize=6.3, color=C_MUTED, va="top")
+
+    if not av:
+        for a_ in (ax, bx):
+            a_.text(0, 0, "No avalanches reported", ha="center", va="center", fontsize=9, color=C_MUTED)
+    note = "Rings: elevation, 13,000 ft at the centre to 4,000 ft at the edge"
+    if unplotted:
+        note += f"  ·  {unplotted} without aspect/elevation not shown"
+    fig.text(0.42, 0.405, note, ha="center", fontsize=7, color=C_MUTED)
+
+    # ---- four bar charts in a row along the bottom
     charts = [
         ("Avalanches by Type", _avy_tally([a.get("avalancheType") for a in av], AVY_TYPES)),
         ("Avalanches by Problem", _avy_tally([a.get("avalancheProblem") for a in av], AVY_PROBLEMS)),
         ("Avalanches by Weak Layer", _avy_tally([a.get("weakLayer") for a in av], AVY_LAYERS)),
         ("Avalanches by Trigger", _avy_tally([a.get("trigger") for a in av], AVY_TRIGGERS)),
     ]
-    for (title, (rows, unreported)), (x0, y0) in zip(
-            charts, [(0.565, 0.55), (0.85, 0.55), (0.565, 0.1), (0.85, 0.1)]):
-        bx = fig.add_axes([x0, y0, 0.115, 0.3])
-        bx.set_axisbelow(True)
+    for (title, (rows, unreported)), x0 in zip(charts, (0.13, 0.375, 0.62, 0.865)):
+        y0, h = 0.07, 0.27
+        cx = fig.add_axes([x0, y0, 0.1, h])
+        cx.set_axisbelow(True)
         labels = [r[0] for r in rows][::-1]
         vals = [r[1] for r in rows][::-1]
         top = max(vals + [1])
-        bx.barh(labels, vals, color=C_COOL, height=0.65)
+        cx.barh(labels, vals, color=C_COOL, height=0.65)
         for yi, v in enumerate(vals):
             if v:
-                bx.text(v + top * 0.03, yi, str(v), va="center", fontsize=6.5, color=C_TEXT)
-        bx.set_xlim(0, top * 1.2)
-        bx.tick_params(axis="y", labelsize=6.5, length=0)
-        bx.tick_params(axis="x", labelsize=6)
-        bx.xaxis.get_major_locator().set_params(integer=True)
-        bx.grid(axis="y", visible=False)
-        fig.text(x0 - 0.135, y0 + 0.33, title, fontsize=9.5, weight="bold", color=C_TEXT)
+                cx.text(v + top * 0.04, yi, str(v), va="center", fontsize=6, color=C_TEXT)
+        cx.set_xlim(0, top * 1.25)
+        cx.tick_params(axis="y", labelsize=6, length=0)
+        cx.tick_params(axis="x", labelsize=5.5)
+        cx.xaxis.get_major_locator().set_params(integer=True)
+        cx.grid(axis="y", visible=False)
+        fig.text(x0 - 0.115, y0 + h + 0.025, title, fontsize=8.8, weight="bold", color=C_TEXT)
         if unreported:
-            bx.text(1.0, -0.13, f"{unreported} of {n} not reported", transform=bx.transAxes,
-                    ha="right", fontsize=6.5, color=C_MUTED)
+            cx.text(1.0, -0.12, f"{unreported} of {n} not reported", transform=cx.transAxes,
+                    ha="right", fontsize=6, color=C_MUTED)
     rep.save(fig, f"Avalanches past {days} days (UAC)")
 
 

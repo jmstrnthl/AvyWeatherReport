@@ -1,8 +1,9 @@
-# Builds the Alta and Park City reports twice a day on GitHub's servers, publishes the
+# Builds the Alta, Park City and Big Cottonwood reports twice a day on GitHub's servers, publishes the
 # newest ones at fixed links on GitHub Pages and emails them:
 #   https://jmstrnthl.github.io/AvyWeatherReport/          (index page)
 #   https://jmstrnthl.github.io/AvyWeatherReport/alta.pdf
 #   https://jmstrnthl.github.io/AvyWeatherReport/pc.pdf
+#   https://jmstrnthl.github.io/AvyWeatherReport/bcc.pdf
 # Pages must be set to "GitHub Actions" under Settings > Pages.
 # Email needs these repository secrets (Settings > Secrets and variables > Actions):
 #   EMAIL_TO        where to send the reports (comma-separated for several)

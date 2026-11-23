@@ -1,26 +1,31 @@
 #!/usr/bin/env python3
 r"""
-Comprehensive mountain weather reports -> two PDFs:
+Comprehensive mountain weather reports -> three PDFs:
   reports/alta_weather_report_YYYYMMDD_HHMM.pdf   (Alta & Little Cottonwood)
   reports/pc_weather_report_YYYYMMDD_HHMM.pdf     (Park City & Deer Valley)
+  reports/bcc_weather_report_YYYYMMDD_HHMM.pdf    (Big Cottonwood Canyon)
 Locations, forecast points and stations for each report are set in SITES below.
 
-Forecast sections (scraped; the first two are shared by both reports):
+Forecast sections (scraped; the avalanche and AFD sections are shared by all reports):
   * Utah Avalanche Center - Salt Lake forecast (text + danger rose + problem graphics)
   * NWS Salt Lake City Area Forecast Discussion (AFD)
-  * NWS point forecasts (Alta Base + Mount Superior / PC Base + PC Jupiter): hourly
-    charts, a daily summary and an hourly table, all built from the tabular
-    ("digital") forecast pages
-  * University of Utah GEFS downscaled ensemble plume (Alta-Collins / PCMR Summit)
+  * NWS point forecasts (Alta Base + Mount Superior / PC Base + PC Jupiter / Kessler +
+    Spruces + Flagstaff): 7-day and next-24-hour charts plus a daily summary, built
+    from the tabular ("digital") forecast pages
+  * University of Utah GEFS downscaled ensemble plume (Alta-Collins / PCMR Summit /
+    Silver Lake Brighton)
+  * UAC avalanches reported in the Salt Lake region over the past 7 days
 
 History sections:
   * NCEI co-op station (Alta: ALTA, GHCND:USC00420072; Park City: PARK CITY,
-    GHCND:USC00426644): the station is looked up with the HOMR API
+    GHCND:USC00426644; Big Cottonwood: SILVER LAKE BRIGHTON, GHCND:USC00427846):
+    the station is looked up with the HOMR API
     (https://www.ncei.noaa.gov/access/homr/api, station *metadata* only) and its daily
     data comes from the NCEI Access Data Service: max/min temperature, new snow and
     snow depth (no wind). NCEI data lag days to a couple of weeks.
   * Mesonet stations (Alta: ALTA - BASE, COLLINS, TOP OF COLLINS, MOUNT BALDY,
-    LCC - CARDIFF PEAK; Park City: DV - BURNS, DV - EMPIRE PEAK): 30-day daily
+    LCC - CARDIFF PEAK; Park City: DV - BURNS, DV - EMPIRE PEAK; Big Cottonwood:
+    SOLITUDE HONEYCOMB PEAK, REYNOLDS PEAK, SPRUCES): 30-day daily
     temperature, wind speed and wind direction candlesticks, plus the last 24 hours of
     hourly temperature and wind/gusts and a 24-hour wind rose.
     NCEI/HOMR doesn't carry these stations. Sources, tried in order per station:
@@ -148,6 +153,17 @@ SITES = {
                   ("DV - EMPIRE PEAK", 9570, "EMPUT")],
         history_label="Park City / Deer Valley stations",
         ncei_ghcnd="USC00426644"),   # PARK CITY co-op, 6,900 ft
+    "bcc": Site(
+        key="bcc", title="Big Cottonwood Canyon", file_prefix="bcc_weather_report",
+        points=[Point("Kessler", 9400, 40.626, -111.669),
+                Point("Spruces", 7400, 40.643, -111.637),
+                Point("Flagstaff", 10318, 40.599, -111.67)],
+        plume_station="PKCU1", plume_name="Silver Lake Brighton",
+        stations=[("SOLITUDE HONEYCOMB PEAK", 10488, "SOLHP"),
+                  ("REYNOLDS PEAK", 9400, "REY"),
+                  ("SPRUCES", 7400, "SPC")],
+        history_label="Big Cottonwood stations",
+        ncei_ghcnd="USC00427846"),   # SILVER LAKE BRIGHTON co-op
 }
 
 PAGE = (8.5, 11)  # portrait letter

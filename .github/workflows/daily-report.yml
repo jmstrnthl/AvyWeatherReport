@@ -1,10 +1,17 @@
-# Builds the Alta, Park City and Big Cottonwood reports twice a day on GitHub's servers, publishes the
-# newest ones at fixed links on GitHub Pages and emails them:
+# Builds the Alta, Park City and Big Cottonwood reports twice a day on GitHub's servers,
+# publishes the newest ones at fixed links on GitHub Pages and emails them:
 #   https://jmstrnthl.github.io/AvyWeatherReport/          (index page)
 #   https://jmstrnthl.github.io/AvyWeatherReport/alta.pdf
 #   https://jmstrnthl.github.io/AvyWeatherReport/pc.pdf
 #   https://jmstrnthl.github.io/AvyWeatherReport/bcc.pdf
+#   https://jmstrnthl.github.io/AvyWeatherReport/status.json  (what the last run got)
 # Pages must be set to "GitHub Actions" under Settings > Pages.
+#
+# Catch-up runs: 30 minutes after each main run, a second schedule checks status.json.
+# If every section of the last run succeeded it stops within seconds; if a section
+# failed (or nothing was published recently) it rebuilds everything and emails it with
+# " (updated)" added to the subject.
+#
 # Email needs these repository secrets (Settings > Secrets and variables > Actions):
 #   EMAIL_TO        where to send the reports (comma-separated for several)
 #   SMTP_USER       sending account, e.g. a Gmail address
@@ -17,36 +24,75 @@ on:
   schedule:
     # GitHub cron is UTC. Times below are MST (ski season); add an hour under MDT.
     # Scheduled runs can start a few minutes (occasionally much) late.
-    - cron: "30 14 * * *" # 7:30 AM MST
-    - cron: "30 2 * * *"  # 7:30 PM MST (02:30 UTC the next day)
-  workflow_dispatch: # "Run workflow" button for a manual run
+    - cron: "30 14 * * *" # 7:30 AM MST  main run
+    - cron: "30 2 * * *"  # 7:30 PM MST  main run (02:30 UTC the next day)
+    - cron: "0 15 * * *"  # 8:00 AM MST  catch-up, only if the 7:30 run had a failure
+    - cron: "0 3 * * *"   # 8:00 PM MST  catch-up, only if the 7:30 run had a failure
+  workflow_dispatch: # "Run workflow" button for a manual run (always builds)
 
 permissions:
   contents: write # to commit the updated station history in data/
 
 concurrency:
-  group: daily-report
+  group: daily-report # a catch-up that starts early waits for the main run to finish
   cancel-in-progress: false
 
 jobs:
   report:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Decide whether to build (catch-up runs only build after a failure)
+        id: decide
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          STATUS_URL: https://jmstrnthl.github.io/AvyWeatherReport/status.json
+        run: |
+          python3 - <<'PY'
+          import datetime as dt, json, os, time, urllib.request
+          catch_up = os.environ.get("SCHEDULE") in ("0 15 * * *", "0 3 * * *")
+          run, suffix, why = True, "", "main run"
+          if catch_up:
+              suffix = "(updated)"  # the script adds the space before it
+              try:
+                  url = f"{os.environ['STATUS_URL']}?t={int(time.time())}"
+                  with urllib.request.urlopen(url, timeout=30) as r:
+                      st = json.load(r)
+                  age = dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(st["generated"])
+                  if age > dt.timedelta(hours=3):
+                      why = f"last published report is {age} old"
+                  elif st.get("complete"):
+                      run, why = False, "last run was complete"
+                  else:
+                      why = "last run had failures: " + "; ".join(st.get("failed", []))
+              except Exception as e:
+                  why = f"couldn't read status.json ({e})"
+          print(("Building" if run else "Skipping") + f" - {why}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"run={'true' if run else 'false'}\nsuffix={suffix}\n")
+          PY
 
-      - uses: actions/setup-python@v5
+      - if: steps.decide.outputs.run == 'true'
+        uses: actions/checkout@v4
+
+      - if: steps.decide.outputs.run == 'true'
+        uses: actions/setup-python@v5
         with:
           python-version: "3.14"
           cache: pip
 
       - name: Install Python packages
+        if: steps.decide.outputs.run == 'true'
         run: pip install -r requirements.txt
 
       - name: Install headless Chromium (for the weather.gov station pages)
+        if: steps.decide.outputs.run == 'true'
         run: python -m playwright install --with-deps chromium-headless-shell
 
       - name: Build the reports, write the web page, and email them
+        if: steps.decide.outputs.run == 'true'
         env:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
@@ -54,17 +100,19 @@ jobs:
           SMTP_HOST: ${{ vars.SMTP_HOST || 'smtp.gmail.com' }}
           SMTP_PORT: ${{ vars.SMTP_PORT || '465' }}
           SYNOPTIC_TOKEN: ${{ secrets.SYNOPTIC_TOKEN }}
-        run: python weather_report.py --publish-dir "" --site-dir _site
+        run: >-
+          python weather_report.py --publish-dir "" --site-dir _site
+          --email-subject-suffix "${{ steps.decide.outputs.suffix }}"
 
       # Published even if only the email failed (the page is written before emailing)
       - name: Package the web page for GitHub Pages
-        if: always() && hashFiles('_site/index.html') != ''
+        if: always() && steps.decide.outputs.run == 'true' && hashFiles('_site/index.html') != ''
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site/
 
       - name: Keep the PDFs and log as a downloadable artifact
-        if: always()
+        if: always() && steps.decide.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: weather-reports
@@ -73,7 +121,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Save the station history for tomorrow's run
-        if: always()
+        if: always() && steps.decide.outputs.run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -89,7 +137,7 @@ jobs:
   pages:
     # Puts the newest reports at the fixed links above
     needs: report
-    if: always() && needs.report.result != 'cancelled'
+    if: always() && needs.report.result != 'cancelled' && needs.report.outputs.run == 'true'
     runs-on: ubuntu-latest
     permissions:
       pages: write

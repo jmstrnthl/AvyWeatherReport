@@ -6,6 +6,12 @@ Comprehensive mountain weather reports -> three PDFs:
   reports/bcc_weather_report_YYYYMMDD_HHMM.pdf    (Big Cottonwood Canyon)
 Locations, forecast points and stations for each report are set in SITES below.
 
+Reliability: every download retries (see get(): 3 more attempts after 10/30/60 s, bad
+pages such as NWS "Runtime Error" included). If a forecast.weather.gov table still
+fails, that point's forecast comes from the NWS API instead (same values; the page says
+so). Each run's per-section results go to status.json next to the web page, which the
+workflow's catch-up runs use to rebuild only when something failed.
+
 Forecast sections (scraped; the avalanche and AFD sections are shared by all reports):
   * Utah Avalanche Center - Salt Lake forecast (text + danger rose + problem graphics)
   * NWS Salt Lake City Area Forecast Discussion (AFD)
@@ -61,6 +67,7 @@ import re
 import shutil
 import sys
 import textwrap
+import time
 import traceback
 from dataclasses import dataclass, field
 from zoneinfo import ZoneInfo
@@ -96,6 +103,8 @@ NCEI_DATA = "https://www.ncei.noaa.gov/access/services/data/v1"
 
 SYNOPTIC_BASE = "https://api.synopticdata.com/v2"
 NWS_API = "https://api.weather.gov"
+NWS_API_HEADERS = {"User-Agent": "(alta-weather-report, personal use)",
+                   "Accept": "application/geo+json"}
 WRH_TIMESERIES = "https://www.weather.gov/wrh/timeseries"
 CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 # After a full run (both reports), the PDFs are copied here and every other file
@@ -191,10 +200,51 @@ plt.rcParams.update({
 })
 
 
-def get(url: str, **kw) -> requests.Response:
-    r = requests.get(url, headers=HEADERS, timeout=TIMEOUT, **kw)
-    r.raise_for_status()
-    return r
+RETRY_WAITS = (10, 30, 60)   # seconds to wait before each retry
+_HTTP_CACHE: dict = {}       # good responses only, shared by every report and both passes
+_DOWN_HOSTS: set = set()     # hosts that already failed every attempt during this run
+
+
+class FetchError(RuntimeError):
+    pass
+
+
+def get(url: str, params: dict | None = None, validate=None, headers: dict | None = None,
+        **kw) -> requests.Response:
+    """GET with retries and a per-run cache.
+
+    Retries timeouts, connection errors, HTTP 5xx/429 and responses that fail
+    `validate(response)` (e.g. an NWS "Runtime Error" page served with status 200),
+    waiting RETRY_WAITS between attempts. Other 4xx errors aren't retried. Only good
+    responses are cached, so a bad page is never reused. Once a host has failed
+    completely, later requests to it get a single quick retry so an outage can't stall
+    the whole run."""
+    key = (url, tuple(sorted((params or {}).items())))
+    if key in _HTTP_CACHE:
+        return _HTTP_CACHE[key]
+    host = requests.utils.urlparse(url).netloc
+    waits = (0,) + ((10,) if host in _DOWN_HOSTS else RETRY_WAITS)
+    last = None
+    for wait in waits:
+        if wait:
+            print(f"  retrying {url} in {wait}s ({last})", file=sys.stderr, flush=True)
+            time.sleep(wait)
+        try:
+            r = requests.get(url, params=params, headers={**HEADERS, **(headers or {})},
+                             timeout=TIMEOUT, **kw)
+            if r.status_code >= 500 or r.status_code == 429:
+                last = f"HTTP {r.status_code}"
+                continue
+            r.raise_for_status()  # other 4xx: a real error, not worth retrying
+            if validate is not None and not validate(r):
+                last = "unexpected page content"
+                continue
+            _HTTP_CACHE[key] = r
+            return r
+        except (requests.ConnectionError, requests.Timeout) as e:
+            last = type(e).__name__
+    _DOWN_HOSTS.add(host)
+    raise FetchError(f"{url} failed after {len(waits)} attempts ({last})")
 
 
 def soup_of(url: str, **kw) -> BeautifulSoup:
@@ -733,30 +783,126 @@ def parse_digital(soup: BeautifulSoup) -> pd.DataFrame:
     return out[~out.index.duplicated()].sort_index()
 
 
-def fetch_point_forecast(pt: Point) -> tuple[pd.DataFrame, int | None]:
+def _is_digital_table(r: requests.Response) -> bool:
+    """True for a real tabular-forecast page (not e.g. an NWS "Runtime Error" page)."""
+    return "Hour" in r.text and "Temperature" in r.text
+
+
+def fetch_point_forecast_table(pt: Point) -> tuple[pd.DataFrame, int | None]:
     """All 7 days of the NWS tabular forecast for a point (the page shows 48 h at a
-    time), plus the NWS grid-cell elevation printed on the page."""
-    frames, grid_elev, last_err = [], None, None
+    time), plus the NWS grid-cell elevation printed on the page. Raises unless every
+    48-hour page loads, so a partly failed table falls back to the NWS API."""
+    frames, grid_elev = [], None
     for ah in (0, 48, 96, 144):
-        try:
-            soup = soup_of(pt.url + f"&AheadHour={ah}")
-            if grid_elev is None:
-                m = re.search(r"Elev\.?\s*([\d,]+)\s*ft", soup.get_text(" "))
-                grid_elev = int(m.group(1).replace(",", "")) if m else None
-            frames.append(parse_digital(soup))
-        except Exception as e:
-            last_err = e
-    if not frames:
-        raise RuntimeError(f"NWS tabular forecast unavailable for {pt.label}: {last_err}")
+        r = get(pt.url + f"&AheadHour={ah}", validate=_is_digital_table)
+        r.encoding = r.apparent_encoding if (r.encoding or "").lower() in ("", "iso-8859-1") else r.encoding
+        soup = BeautifulSoup(r.text, "html.parser")
+        if grid_elev is None:
+            m = re.search(r"Elev\.?\s*([\d,]+)\s*ft", soup.get_text(" "))
+            grid_elev = int(m.group(1).replace(",", "")) if m else None
+        frames.append(parse_digital(soup))
     fc = pd.concat(frames)
     return fc[~fc.index.duplicated()].sort_index(), grid_elev
 
 
+# NWS API weather "coverage" -> the abbreviations the tabular forecast uses
+_COVERAGE = {"slight_chance": "SChc", "chance": "Chc", "likely": "Lkly", "definite": "Def",
+             "occasional": "Ocnl", "isolated": "Iso", "scattered": "Sct", "numerous": "Num",
+             "areas": "Areas", "patchy": "Patchy", "widespread": "Wide", "frequent": "Frq",
+             "periods": "Pds", "brief": "Brf", "intermittent": "Inter"}
+_WEATHER_COL = {"snow": "snow", "snow_showers": "snow", "blowing_snow": "snow",
+                "rain": "rain", "rain_showers": "rain", "drizzle": "rain",
+                "thunderstorms": "thunder", "freezing_rain": "freezing_rain",
+                "freezing_drizzle": "freezing_rain", "sleet": "sleet", "ice_pellets": "sleet"}
+_COMPASS16 = "N NNE NE ENE E ESE SE SSE S SSW SW WSW W WNW NW NNW".split()
+
+
+def _iso_hours(duration: str) -> int:
+    """ISO 8601 duration like PT3H, P2D or P4DT12H -> whole hours."""
+    m = re.fullmatch(r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?", duration)
+    if not m:
+        return 1
+    d, h, mins = (int(x) if x else 0 for x in m.groups())
+    return max(1, d * 24 + h + (1 if mins else 0))
+
+
+def _expand(layer: dict, hours: pd.DatetimeIndex) -> pd.Series:
+    """Spread an NWS API grid layer ("from T for N hours: value") over hourly times."""
+    out = pd.Series(np.nan, index=hours, dtype=object)
+    for v in (layer or {}).get("values", []):
+        start, dur = v["validTime"].split("/")
+        t0 = pd.Timestamp(start).tz_convert(TZ)
+        t1 = t0 + pd.Timedelta(hours=_iso_hours(dur))
+        for t in hours[(hours >= t0) & (hours < t1)]:
+            out.at[t] = v["value"]  # one cell at a time: values can be lists (weather)
+    return out
+
+
+def fetch_point_forecast_api(pt: Point) -> tuple[pd.DataFrame, int | None]:
+    """The same NWS forecast for a point from the NWS API (api.weather.gov), shaped like
+    the tabular forecast so the charts and daily summary don't change. The API runs on
+    separate servers from forecast.weather.gov, so it's a useful fallback. Values match
+    the table; the one visible difference is that the API always reports a gust, while
+    the table only shows notable ones."""
+    meta = get(f"{NWS_API}/points/{pt.lat},{pt.lon}", headers=NWS_API_HEADERS).json()
+    grid = get(meta["properties"]["forecastGridData"], headers=NWS_API_HEADERS).json()["properties"]
+
+    now = pd.Timestamp.now(tz=TZ).floor("h")
+    hours = pd.date_range(now, now + pd.Timedelta(days=7) - pd.Timedelta(hours=1), freq="h")
+
+    def num(name):
+        return pd.to_numeric(_expand(grid.get(name), hours), errors="coerce")
+
+    def f_from_c(s):
+        return (s * 9 / 5 + 32).round()
+
+    def mph(s):
+        return (s / 1.609344).round()
+
+    wdir = num("windDirection")
+    fc = pd.DataFrame({
+        "temp": f_from_c(num("temperature")), "dewpt": f_from_c(num("dewpoint")),
+        "chill": f_from_c(num("windChill")), "wind": mph(num("windSpeed")),
+        "gust": mph(num("windGust")), "sky": num("skyCover").round(),
+        "pop": num("probabilityOfPrecipitation").round(), "rh": num("relativeHumidity").round(),
+        "wdir": [(_COMPASS16[int((d % 360) / 22.5 + 0.5) % 16] if np.isfinite(d) else "")
+                 for d in wdir],
+    }, index=hours)
+    # precipitation types, e.g. snow "SChc", in the tabular forecast's columns
+    for col in set(_WEATHER_COL.values()):
+        fc[col] = ""
+    for t, conds in _expand(grid.get("weather"), hours).items():
+        for c in conds if isinstance(conds, list) else []:
+            col = _WEATHER_COL.get(c.get("weather") or "")
+            if col and c.get("coverage"):
+                fc.at[t, col] = _COVERAGE.get(c["coverage"], c["coverage"].title())
+    fc = fc.dropna(subset=["temp"])
+    if fc.empty:
+        raise RuntimeError(f"NWS API returned no forecast values for {pt.label}")
+    elev = (grid.get("elevation") or {}).get("value")
+    return fc, (round(elev * 3.28084) if elev is not None else None)
+
+
+def fetch_point_forecast(pt: Point) -> tuple[pd.DataFrame, int | None, str]:
+    """The tabular forecast page first (after retries); the NWS API if it still fails.
+    Returns (forecast, NWS grid elevation in ft, source)."""
+    try:
+        fc, elev = fetch_point_forecast_table(pt)
+        return fc, elev, "forecast.weather.gov"
+    except Exception as e:
+        print(f"  forecast table failed for {pt.label} ({e}); trying the NWS API", file=sys.stderr)
+    fc, elev = fetch_point_forecast_api(pt)
+    return fc, elev, "NWS API"
+
+
 def point_forecast_section(rep: Report, pt: Point, section: str):
-    fc, grid_elev = fetch_point_forecast(pt)
+    fc, grid_elev, source = fetch_point_forecast(pt)
     title = f"NWS Point Forecast — {pt.label} (elev {pt.elev:,} ft)"
     where = f"{pt.lat}, {pt.lon}" + (f"  ·  NWS grid elevation {grid_elev:,} ft" if grid_elev else "")
+    if source != "forecast.weather.gov":
+        where += f"  ·  source: {source} (forecast table unavailable)"
     forecast_charts_page(rep, fc, title, where, section)
+    return "ok" if source == "forecast.weather.gov" else f"ok ({source})"
 
 
 def forecast_charts_page(rep: Report, fc: pd.DataFrame, title: str, where: str, section: str):
@@ -972,33 +1118,44 @@ def draw_daily_summary(fig, fc: pd.DataFrame, top: float):
 
 
 # --------------------------------------------------------------------------- forecast: plumes
-def plume_section(rep: Report, station: str, name: str):
+# weather.utah.edu plume products: model code -> (page title, contents entry)
+PLUME_MODELS = {
+    "ensgefsds": ("Utah Snow Ensemble (GEFS downscaled) Plumes", "Ensemble plumes (U of U)"),
+    "rrfsqsf": ("RRFS Hourly Snow Ensemble Plumes", "RRFS hourly snow plumes (U of U)"),
+}
+
+
+def _plume_images(html: str) -> list[str]:
+    """Image paths the plume page lists in its images_vis array."""
+    m = re.search(r"images_vis:\s*\[(.*?)\]", html, re.S)
+    return re.findall(r'"([^"]+\.(?:png|gif|jpg))"', m.group(1)) if m else []
+
+
+def plume_section(rep: Report, station: str, name: str, model: str = "ensgefsds"):
+    title, section = PLUME_MODELS[model]
     # Without a runcode the page serves the latest run; we still read the run from the HTML.
-    r = get(PLUME_PAGE, params={"t": "ensgefsds", "d": "PL", "r": station})
-    html = r.text
-    paths = re.findall(r'"([^"]*ENSGEFSDSPL[^"]*\.png)"', html)
+    paths = _plume_images(get(PLUME_PAGE, params={"t": model, "d": "PL", "r": station}).text)
     if not paths:
         # try today's and the previous two days' runs explicitly
         for back in range(0, 3):
             day = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=back)
             for hh in ("18", "12", "06", "00"):
                 rc = f"{day:%Y%m%d}{hh}"
-                html = get(PLUME_PAGE, params={"runcode": rc, "t": "ensgefsds", "d": "PL",
-                                               "r": station}).text
-                paths = re.findall(r'"([^"]*ENSGEFSDSPL[^"]*\.png)"', html)
+                paths = _plume_images(get(PLUME_PAGE, params={"runcode": rc, "t": model, "d": "PL",
+                                                              "r": station}).text)
                 if paths:
                     break
             if paths:
                 break
     if not paths:
-        raise RuntimeError(f"No plume images found on weather.utah.edu for {station}")
+        raise RuntimeError(f"No {model} plume images found on weather.utah.edu for {station}")
     imgs = [fetch_image(requests.compat.urljoin(PLUME_PAGE, p)) for p in paths]
     run = re.search(r"(\d{10})F\d+", paths[0])
     run_txt = f"run {run.group(1)[:8]} {run.group(1)[8:]}Z" if run else ""
     for i, img in enumerate(imgs):
-        image_page(rep, f"GEFS Downscaled Ensemble Plumes — {name}", [img],
-                   f"University of Utah  ·  {run_txt}  ·  weather.utah.edu (t=ensgefsds, d=PL, r={station})",
-                   section="Ensemble plumes (U of U)" if i == 0 else None,
+        image_page(rep, f"{title} — {name}", [img],
+                   f"University of Utah  ·  {run_txt}  ·  weather.utah.edu (t={model}, d=PL, r={station})",
+                   section=section if i == 0 else None,
                    landscape=img.width > img.height)
 
 
@@ -1425,14 +1582,11 @@ def nws_observations(stid: str, days: int) -> pd.DataFrame:
     It keeps roughly the last 7 days and, for these mesonet stations, usually has
     readings for about half the hours of each day.
     """
-    hdr = {"User-Agent": "(alta-weather-report, personal use)", "Accept": "application/geo+json"}
     start = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)
     url, params, rows = (f"{NWS_API}/stations/{stid}/observations",
                          {"start": start.strftime("%Y-%m-%dT%H:%M:%SZ")}, [])
     for _ in range(30):  # follow pagination
-        r = requests.get(url, params=params, headers=hdr, timeout=TIMEOUT)
-        r.raise_for_status()
-        js = r.json()
+        js = get(url, params=params, headers=NWS_API_HEADERS).json()
         feats = js.get("features", [])
         rows += [f["properties"] for f in feats]
         nxt = js.get("pagination", {}).get("next")
@@ -1684,7 +1838,7 @@ def title_page(rep: Report, site: Site, days: int, statuses: list[tuple[str, str
     ids = "|".join(sid for _, _, sid in site.stations)
     srcs = ([UAC_URL, f"{UAC_EXPLORER} (avalanches, {AVY_REGION})", AFD_URL]
             + [p.url for p in site.points]
-            + [f"{PLUME_PAGE}?t=ensgefsds&d=PL&r={site.plume_station}"]
+            + [f"{PLUME_PAGE}?t={m}&d=PL&r={site.plume_station}" for m in PLUME_MODELS]
             + (["https://www.ncei.noaa.gov/access/homr/api"] if site.ncei_ghcnd else [])
             + [f"{WRH_TIMESERIES}?site={ids}&hourly=true&hours=720",
                "https://api.synopticdata.com/v2 (fallback)",
@@ -1696,7 +1850,8 @@ def title_page(rep: Report, site: Site, days: int, statuses: list[tuple[str, str
 
 
 # --------------------------------------------------------------------------- main
-def build_report(site: Site, args, overrides: dict[str, str], now: dt.datetime, outdir: str) -> str:
+def build_report(site: Site, args, overrides: dict[str, str], now: dt.datetime,
+                 outdir: str) -> tuple[str, list[tuple[str, str]]]:
     out = os.path.join(outdir, f"{site.file_prefix}_{now:%Y%m%d_%H%M}.pdf")
     sections = [
         ("Avalanche forecast (UAC)", lambda r: avalanche_section(r)),
@@ -1708,6 +1863,8 @@ def build_report(site: Site, args, overrides: dict[str, str], now: dt.datetime, 
                              r, pt, f"NWS forecast: {pt.label} ({pt.elev:,} ft)")))
     sections.append(("Ensemble plumes (U of U)",
                      lambda r: plume_section(r, site.plume_station, site.plume_name)))
+    sections.append(("RRFS hourly snow plumes (U of U)",
+                     lambda r: plume_section(r, site.plume_station, site.plume_name, "rrfsqsf")))
     if site.ncei_ghcnd:
         sections.append(("History: NCEI / HOMR",
                          lambda r: ncei_section(r, args.days, site.ncei_ghcnd)))
@@ -1744,7 +1901,7 @@ def build_report(site: Site, args, overrides: dict[str, str], now: dt.datetime, 
     os.remove(tmp)
     build(out, statuses_in=statuses, toc_in=toc)
     print(f"Wrote {out}\n")
-    return out
+    return out, statuses
 
 
 def main(argv=None):
@@ -1762,6 +1919,8 @@ def main(argv=None):
     ap.add_argument("--email-to", default=os.environ.get("EMAIL_TO"),
                     help="email the PDFs to these comma-separated addresses (or env EMAIL_TO); "
                          "needs SMTP_USER and SMTP_PASSWORD, see email_reports()")
+    ap.add_argument("--email-subject-suffix", default="",
+                    help='added to the email subject, e.g. "(updated)" for a catch-up run')
     ap.add_argument("--days", type=int, default=30, help="history window in days (default 30)")
     ap.add_argument("--synoptic-token", default=os.environ.get("SYNOPTIC_TOKEN"),
                     help="Synoptic Data API token (or env SYNOPTIC_TOKEN); fallback source only")
@@ -1774,31 +1933,27 @@ def main(argv=None):
     overrides = dict(s.split("=", 1) for s in args.stid)
     sites = list(SITES.values()) if args.site == "all" else [SITES[args.site]]
 
-    # Both reports and both passes share the avalanche/AFD/etc. downloads.
-    _cache: dict = {}
-    _orig_get = requests.get
-
-    def cached_get(url, *a, **kw):
-        key = (url, tuple(sorted((kw.get("params") or {}).items())))
-        if key not in _cache:
-            _cache[key] = _orig_get(url, *a, **kw)
-        return _cache[key]
-
-    requests.get = cached_get
-    try:
-        outputs = [build_report(site, args, overrides, now, args.outdir) for site in sites]
-    finally:
-        requests.get = _orig_get
+    # All reports and both passes share downloads through get()'s cache.
+    results = [build_report(site, args, overrides, now, args.outdir) for site in sites]
+    outputs = [out for out, _ in results]
+    statuses = {site.key: st for site, (_, st) in zip(sites, results)}
 
     if args.publish_dir and args.site == "all":
         publish(outputs, args.publish_dir)
     elif args.publish_dir:
         print(f"Not publishing: --site {args.site} builds only one report, and publishing "
               f"would delete the other one from {args.publish_dir}")
+    complete = all(st.startswith("ok") for sts in statuses.values() for _, st in sts)
+    failed = [f"{k}: {name}" for k, sts in statuses.items() for name, st in sts
+              if not st.startswith("ok")]
+    print("All sections ok" if complete else "Sections that failed: " + "; ".join(failed))
     if args.site_dir:
         build_site(outputs, args.site_dir, now)
+        with open(os.path.join(args.site_dir, "status.json"), "w", encoding="utf-8") as f:
+            json.dump({"generated": now.isoformat(), "complete": complete, "failed": failed,
+                       "sections": {k: dict(sts) for k, sts in statuses.items()}}, f, indent=1)
     if args.email_to:
-        email_reports(outputs, args.email_to, now)
+        email_reports(outputs, args.email_to, now, args.email_subject_suffix)
     return outputs
 
 
@@ -1864,7 +2019,7 @@ def build_site(pdfs: list[str], site_dir: str, now: dt.datetime):
     print(f"Wrote web page to {site_dir}")
 
 
-def email_reports(pdfs: list[str], to: str, now: dt.datetime):
+def email_reports(pdfs: list[str], to: str, now: dt.datetime, subject_suffix: str = ""):
     """Email the PDFs as attachments with the subject "YYYYMMDD Utah Avy Weather Report".
 
     SMTP settings come from environment variables (never from the repo):
@@ -1886,7 +2041,8 @@ def email_reports(pdfs: list[str], to: str, now: dt.datetime):
     recipients = [a.strip() for a in to.split(",") if a.strip()]
 
     msg = EmailMessage()
-    msg["Subject"] = f"{now:%Y%m%d} Utah Avy Weather Report"
+    suffix = subject_suffix.strip()
+    msg["Subject"] = f"{now:%Y%m%d} Utah Avy Weather Report" + (f" {suffix}" if suffix else "")
     msg["From"] = os.environ.get("EMAIL_FROM", user)
     msg["To"] = ", ".join(recipients)
     names = [os.path.basename(p) for p in pdfs if os.path.isfile(p)]

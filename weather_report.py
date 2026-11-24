@@ -654,19 +654,31 @@ def avalanche_activity_section(rep: Report, days: int = 7):
     bx = _aspect_axes(fig, [0.5, 0.47, 0.29, 0.375], "Each Avalanche by Problem")
     counts = {}
     slots = {}  # nudge avalanches at the same aspect and similar elevation apart
-    for a in sorted(placed, key=lambda a: a["elevation"]):
+
+    def days_ago(a) -> int:
+        try:
+            d = dt.datetime.strptime(str(a.get("date")), "%Y%m%d").date()
+        except ValueError:
+            return days
+        return max(0, min(days, (end - d).days))
+
+    def age_alpha(age: int) -> float:  # reported today 1.0 ... `days` ago 0.2
+        return 1.0 - 0.8 * age / days
+
+    # oldest first, so each newer avalanche is drawn on top of older ones
+    for rank, a in enumerate(sorted(placed, key=lambda a: (-days_ago(a), a["elevation"]))):
         prob = _problem_of(a)
         counts[prob] = counts.get(prob, 0) + 1
         key = (a["aspect"], round(a["elevation"] / 250))
         k = slots.get(key, 0)
         slots[key] = k + 1
-        offset = (k + 1) // 2 * 6 * (1 if k % 2 else -1)  # 0, +6, -6, +12, ... degrees
+        offset = (k + 1) // 2 * 7 * (1 if k % 2 else -1)  # 0, +7, -7, +14, ... degrees
         color, marker = PROBLEM_STYLE[prob]
         hollow = prob == "No problem reported"
-        bx.scatter(np.deg2rad(ASPECT_DEG[a["aspect"]] + offset), E_TOP - a["elevation"], s=48,
+        bx.scatter(np.deg2rad(ASPECT_DEG[a["aspect"]] + offset), E_TOP - a["elevation"], s=80,
                    marker=marker, facecolor="none" if hollow else color,
-                   edgecolor=color if hollow else "white", lw=1.3 if hollow else 0.8, alpha=0.95,
-                   zorder=4 if hollow else 3)  # see-through rings on top hide nothing
+                   edgecolor=color if hollow else "white", lw=1.5 if hollow else 0.9,
+                   alpha=age_alpha(days_ago(a)), zorder=3 + rank)
     handles = [plt.Line2D([], [], ls="", marker=PROBLEM_STYLE[p][1], markersize=7,
                           markerfacecolor="none" if p == "No problem reported" else PROBLEM_STYLE[p][0],
                           markeredgecolor=PROBLEM_STYLE[p][0] if p == "No problem reported" else "white",
@@ -675,9 +687,20 @@ def avalanche_activity_section(rep: Report, days: int = 7):
     fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.805, 0.82), fontsize=7,
                frameon=False, title="Avalanche problem", title_fontsize=7.5, alignment="left",
                labelspacing=0.75, handletextpad=0.5)
-    fig.text(0.81, 0.53, "Other problem = any problem not\nlisted above. An avalanche listing\n"
-                         "several problems is shown by\nthe first one.",
+    fig.text(0.81, 0.535, "Other problem = any problem not\nlisted above. An avalanche listing\n"
+                          "several problems is shown by\nthe first one. Newest on top.",
              fontsize=6.3, color=C_MUTED, va="top")
+    # age key: markers fade from today (opaque) to `days` ago
+    fig.text(0.81, 0.47, "Reported (older = fainter):", fontsize=6.5, weight="bold",
+             color=C_TEXT, va="center")
+    for i, age in enumerate((0, 2, 4, days)):
+        x = 0.817 + i * 0.04
+        fig.add_artist(plt.Line2D([x], [0.445], marker="o", ls="", markersize=6.5,
+                                  color=PROBLEM_STYLE["Persistent Weak Layer"][0],
+                                  markeredgecolor="white", alpha=age_alpha(age),
+                                  transform=fig.transFigure))
+        fig.text(x + 0.008, 0.445, "today" if age == 0 else f"{age}d", fontsize=6,
+                 color=C_TEXT, va="center")
 
     if not av:
         for a_ in (ax, bx):

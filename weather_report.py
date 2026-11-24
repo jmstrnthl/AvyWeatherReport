@@ -602,11 +602,14 @@ def _problem_of(a) -> str:
     return "Other problem"
 
 
-def avalanche_activity_section(rep: Report, days: int = 7):
+def avalanche_activity_section(rep: Report, days: int = 7, title: str | None = None,
+                               section: str | None = None):
+    """Avalanche page for the past `days` days (title/section override the wording, e.g.
+    for the season report)."""
     av, start, end = fetch_avalanches(days)
     n = len(av)
     fig = plt.figure(figsize=LAND)
-    header(fig, f"Avalanches Past {days} Days — {AVY_REGION}",
+    header(fig, f"{title or f'Avalanches Past {days} Days'} — {AVY_REGION}",
            f"{n} avalanche{'s' if n != 1 else ''} reported to the Utah Avalanche Center, "
            f"{start:%b %d} – {end:%b %d %Y}  ·  {UAC_EXPLORER}")
 
@@ -697,7 +700,7 @@ def avalanche_activity_section(rep: Report, days: int = 7):
     # age key: markers fade from today (opaque) to `days` ago
     fig.text(0.81, 0.47, "Reported (older = fainter):", fontsize=6.5, weight="bold",
              color=C_TEXT, va="center")
-    for i, age in enumerate((0, 2, 4, days)):
+    for i, age in enumerate((0, 2, 4, days) if days <= 14 else (0, days // 3, 2 * days // 3, days)):
         x = 0.817 + i * 0.04
         fig.add_artist(plt.Line2D([x], [0.445], marker="o", ls="", markersize=6.5,
                                   color=PROBLEM_STYLE["Persistent Weak Layer"][0],
@@ -741,7 +744,7 @@ def avalanche_activity_section(rep: Report, days: int = 7):
         if unreported:
             cx.text(1.0, -0.12, f"{unreported} of {n} not reported", transform=cx.transAxes,
                     ha="right", fontsize=6, color=C_MUTED)
-    rep.save(fig, f"Avalanches past {days} days (UAC)")
+    rep.save(fig, section or f"Avalanches past {days} days (UAC)")
 
 
 # --------------------------------------------------------------------------- forecast: AFD
@@ -1262,7 +1265,9 @@ def candlestick_temp(ax, daily: pd.DataFrame, title: str, width: float = 0.62):
 
 
 def date_axis(ax):
-    ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
+    lo, hi = ax.get_xlim()  # label every day / 2 days / week depending on the span
+    span = hi - lo
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=1 if span <= 16 else 2 if span <= 45 else 7))
     ax.xaxis.set_minor_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b\n%d"))
     ax.tick_params(axis="x", labelsize=7)
@@ -1361,7 +1366,10 @@ def snow_qc(obs: pd.DataFrame) -> tuple[pd.Series, pd.Series, int, int]:
     return depth, snow6, int(bad_d.sum()), int(bad_s.sum())
 
 
-def ncei_section(rep: Report, days: int, ghcnd: str, snow_station: tuple | None = None):
+def ncei_section(rep: Report, days: int, ghcnd: str, snow_station: tuple | None = None,
+                 saved_only: bool = False):
+    """NCEI co-op page. saved_only: take the station's snow data from data/ instead of
+    scraping weather.gov (season report)."""
     # 1) look the co-op station up with the HOMR API (name, elevation, still active?)
     homr = get(HOMR_SEARCH, params={"qid": f"GHCND:{ghcnd}"}).json()
     stations = homr.get("stationCollection", {}).get("stations", [])
@@ -1397,7 +1405,7 @@ def ncei_section(rep: Report, days: int, ghcnd: str, snow_station: tuple | None 
         s_name, s_elev, s_id = snow_station
         s_label = f"{s_name} ({s_elev:,} ft)"
         try:
-            obs = scrape_wrh([s_id], days).get(s_id)
+            obs = load_saved_obs(s_id) if saved_only else scrape_wrh([s_id], days).get(s_id)
             if obs is not None and not obs.empty:
                 obs = obs[obs.index >= pd.Timestamp(start).tz_localize(TZ)]
                 s_depth, s_snow6, *removed = snow_qc(obs)
@@ -1492,6 +1500,17 @@ def synoptic_timeseries(token: str, stids: list[str], days: int) -> dict[str, pd
                                            "gust": pick("wind_gust"),
                                            "wdir": pick("wind_direction")}).sort_index()
     return frames
+
+
+def load_saved_obs(stid: str) -> pd.DataFrame:
+    """A station's saved observation history (data/obs_<STID>.csv), local time; empty if
+    there's none. Used by the season report, which works from saved data only."""
+    path = os.path.join(CACHE_DIR, f"obs_{stid}.csv")
+    if not os.path.exists(path):
+        return pd.DataFrame()
+    df = pd.read_csv(path, index_col=0)
+    df.index = pd.to_datetime(df.index, utc=True).tz_convert(TZ)
+    return df.sort_index()
 
 
 def merge_cache(stid: str, fresh: pd.DataFrame) -> pd.DataFrame:
@@ -1914,10 +1933,11 @@ def _goes_hour(hour: dt.datetime, points: dict[str, tuple[float, float]]) -> dic
     return None
 
 
-def goes_cloud_cover() -> pd.DataFrame:
+def goes_cloud_cover(fetch: bool = True) -> pd.DataFrame:
     """Hourly GOES-18 cloud cover (%) for every station in every report, last GOES_DAYS
     days, indexed in local time. Saved hours are kept in data/goes_cloud.csv, so each run
-    only downloads the hours it doesn't have yet (one satellite file per hour)."""
+    only downloads the hours it doesn't have yet (one satellite file per hour).
+    fetch=False: saved hours only, no downloads (season report)."""
     if "df" in _GOES:
         return _GOES["df"]
     stids = sorted({sid for site in SITES.values() for _, _, sid in site.stations})
@@ -1929,7 +1949,7 @@ def goes_cloud_cover() -> pd.DataFrame:
     hours = [now - dt.timedelta(hours=h) for h in range(1, GOES_DAYS * 24 + 1)]
     new_station = any(s not in cache.columns for s in stids)
     todo = [h for h in hours if new_station or pd.Timestamp(h) not in cache.index]
-    if todo:
+    if todo and fetch:
         points = {}
         for sid in stids:
             try:
@@ -2005,17 +2025,31 @@ def cloud_line(ax, cloud: pd.Series, obs: pd.DataFrame, hours: int = 24):
 
 
 def station_section(rep: Report, site: Site, token: str | None, days: int,
-                    overrides: dict[str, str]):
+                    overrides: dict[str, str], saved_only: bool = False,
+                    period: str | None = None, recent_panels: bool = True):
+    """Station history pages. saved_only: use only the saved data in data/ (no scraping or
+    downloads; season report). period: page-title wording, default "last N days".
+    recent_panels: include the last-24-hour column (left out of the season report)."""
     section = f"History: {site.history_label}"
-    stations, series, sources = fetch_station_obs(site.stations, token, days, overrides)
-    if not series:
-        raise RuntimeError("No station data from weather.gov, Synoptic or the NWS API")
-    for stid, df in series.items():
-        df["src"] = sources[stid]
-    series = {stid: merge_cache(stid, df) for stid, df in series.items()}
+    period = period or f"last {days} days"
+    if saved_only:
+        stations = [{"name": n, "elev": el, "stid": overrides.get(n, sid)}
+                    for n, el, sid in site.stations]
+        series = {s["stid"]: load_saved_obs(s["stid"]) for s in stations}
+        series = {k: v for k, v in series.items() if not v.empty}
+        sources = {k: "saved data" for k in series}
+        if not series:
+            raise RuntimeError(f"No saved station data in {CACHE_DIR}")
+    else:
+        stations, series, sources = fetch_station_obs(site.stations, token, days, overrides)
+        if not series:
+            raise RuntimeError("No station data from weather.gov, Synoptic or the NWS API")
+        for stid, df in series.items():
+            df["src"] = sources[stid]
+        series = {stid: merge_cache(stid, df) for stid, df in series.items()}
     window_start = pd.Timestamp(dt.datetime.now(TZ).date() - dt.timedelta(days=days - 1)).tz_localize(TZ)
     try:
-        clouds = goes_cloud_cover()
+        clouds = goes_cloud_cover(fetch=not saved_only)
     except Exception as e:  # cloud cover is extra; never fail the station pages over it
         print(f"  GOES cloud cover unavailable: {e}", file=sys.stderr)
         clouds = pd.DataFrame()
@@ -2039,23 +2073,29 @@ def station_section(rep: Report, site: Site, token: str | None, days: int,
 
         # left column: 30-day daily charts (shared date axis)
         # right column: last-24-hour temperature, wind/gust, and the wind rose
+        # (left out of the season report, which shows only the season-long charts)
         fig = plt.figure(figsize=LAND)
-        gs = fig.add_gridspec(3, 2, width_ratios=[3.0, 1.0], height_ratios=[3, 2.5, 2.2],
-                              hspace=0.4, wspace=0.24, left=0.06, right=0.955, top=0.86,
-                              bottom=0.07)
+        if recent_panels:
+            gs = fig.add_gridspec(3, 2, width_ratios=[3.0, 1.0], height_ratios=[3, 2.5, 2.2],
+                                  hspace=0.4, wspace=0.24, left=0.06, right=0.955, top=0.86,
+                                  bottom=0.07)
+        else:
+            gs = fig.add_gridspec(3, 1, height_ratios=[3, 2.5, 2.2], hspace=0.4, left=0.06,
+                                  right=0.93, top=0.86, bottom=0.07)
         a1 = fig.add_subplot(gs[0, 0])
         a2 = fig.add_subplot(gs[1, 0], sharex=a1)
         a3 = fig.add_subplot(gs[2, 0], sharex=a1)
-        b1 = fig.add_subplot(gs[0, 1])
-        b2 = fig.add_subplot(gs[1, 1], sharex=b1)
-        b3 = fig.add_subplot(gs[2, 1], projection="polar")
+        if recent_panels:
+            b1 = fig.add_subplot(gs[0, 1])
+            b2 = fig.add_subplot(gs[1, 1], sharex=b1)
+            b3 = fig.add_subplot(gs[2, 1], projection="polar")
 
         have = t.high.notna().sum()
-        header(fig, f"{title} — last {days} days",
+        header(fig, f"{title} — {period}",
                f"Station {s['stid']}  ·  data: {srcs}  ·  {len(obs):,} observations  ·  "
                f"{have} of {days} days with data  ·  daily = local calendar day ({TZ.key})"
                + ("  ·  gray: GOES-18 cloud cover, last 7 days" if cloud is not None else ""))
-        if have < days:
+        if have < days and not saved_only:
             fig.text(0.975, 0.89, "Older days come from saved earlier runs (data/ folder) when "
                                   "a source has less history", ha="right", fontsize=7.5, color=C_WARM)
         candlestick_temp(a1, t, "Daily temperature — box: 25th–75th pct, whiskers: low/high, "
@@ -2070,29 +2110,33 @@ def station_section(rep: Report, site: Site, token: str | None, days: int,
         plt.setp(a2.get_xticklabels(), visible=False)
         a3.set_xlim(mdates.date2num(t.index[0]) - 0.7, mdates.date2num(t.index[-1]) + 0.7)
 
-        recent_temp_chart(b1, allobs)
-        recent_wind_chart(b2, allobs)
-        if cloud is not None:
-            b2.set_title("Wind, gusts + cloud, last 24 h", loc="left", fontsize=9, weight="bold")
-            cloud_line(b2, cloud, allobs)
-        hour_axis(b2)
-        b1.tick_params(axis="y", labelsize=7)
-        plt.setp(b1.get_xticklabels(), visible=False)
-        wind_rose(b3, allobs)
+        if recent_panels:
+            recent_temp_chart(b1, allobs)
+            recent_wind_chart(b2, allobs)
+            if cloud is not None:
+                b2.set_title("Wind, gusts + cloud, last 24 h", loc="left", fontsize=9, weight="bold")
+                cloud_line(b2, cloud, allobs)
+            hour_axis(b2)
+            b1.tick_params(axis="y", labelsize=7)
+            plt.setp(b1.get_xticklabels(), visible=False)
+            wind_rose(b3, allobs)
 
         rep.save(fig, section if first else None)
         first = False
     used = sorted(set(sources.values()))
-    return "ok" if used == ["weather.gov"] else f"ok ({', '.join(used)})"
+    return "ok" if saved_only or used == ["weather.gov"] else f"ok ({', '.join(used)})"
 
 
 # --------------------------------------------------------------------------- title + contents
-def title_page(rep: Report, site: Site, days: int, statuses: list[tuple[str, str]]):
+def title_page(rep: Report, site: Site, days: int, statuses: list[tuple[str, str]],
+               subtitle: str = "Comprehensive weather report", window: str | None = None,
+               sources: list[str] | None = None):
     fig = plt.figure(figsize=PAGE)
     fig.text(0.06, 0.90, site.title, fontsize=24, weight="bold", color=C_TEXT)
-    fig.text(0.06, 0.862, "Comprehensive weather report", fontsize=15, color=C_MUTED)
+    fig.text(0.06, 0.862, subtitle, fontsize=15, color=C_MUTED)
     fig.text(0.06, 0.832, f"Generated {rep.generated:%A, %B %d %Y at %H:%M %Z}  ·  "
-                          f"history window: last {days} days", fontsize=9, color=C_MUTED)
+                          + (window or f"history window: last {days} days"), fontsize=9,
+             color=C_MUTED)
     y = 0.78
     fig.text(0.06, y, "Contents", fontsize=12, weight="bold"); y -= 0.03
     for name, page in rep.toc:
@@ -2107,7 +2151,7 @@ def title_page(rep: Report, site: Site, days: int, statuses: list[tuple[str, str
         y -= 0.022
     y -= 0.03
     ids = "|".join(sid for _, _, sid in site.stations)
-    srcs = ([UAC_URL, f"{UAC_EXPLORER} (avalanches, {AVY_REGION})", AFD_URL]
+    srcs = sources or ([UAC_URL, f"{UAC_EXPLORER} (avalanches, {AVY_REGION})", AFD_URL]
             + [p.url for p in site.points]
             + [f"{PLUME_PAGE}?t={m}&d=PL&r={site.plume_station}" for m in PLUME_MODELS]
             + (["https://www.ncei.noaa.gov/access/homr/api"] if site.ncei_ghcnd else [])
@@ -2121,6 +2165,88 @@ def title_page(rep: Report, site: Site, days: int, statuses: list[tuple[str, str
 
 
 # --------------------------------------------------------------------------- main
+def write_report(site: Site, sections: list, out: str, now: dt.datetime, doc_title: str,
+                 make_title) -> list[tuple[str, str]]:
+    """Run each (name, fn) section into a PDF with a title page listing the contents.
+    matplotlib can't insert pages, so pass 1 collects the contents and pass 2 writes the
+    final file; downloads are cached, so nothing is fetched twice. A failing section
+    becomes an error page; the rest still build. Returns [(section, status)]."""
+    def build(path, statuses_in=None, toc_in=None):
+        statuses = []
+        with PdfPages(path) as pdf:
+            rep = Report(pdf, generated=now, label=doc_title)
+            if toc_in is not None:
+                rep.toc = toc_in
+                rep.save(make_title(rep, statuses_in))
+                rep.toc = []
+            for name, fn in sections:
+                print(f"- [{site.key}] {name} ...", flush=True)
+                try:
+                    statuses.append((name, fn(rep) or "ok"))
+                except Exception as e:
+                    traceback.print_exc()
+                    error_page(rep, name, f"{type(e).__name__}: {e}", section=name)
+                    statuses.append((name, f"failed: {type(e).__name__}"))
+            d = pdf.infodict()
+            d["Title"] = doc_title
+            d["CreationDate"] = now
+        return rep.toc, statuses
+
+    tmp = out + ".tmp.pdf"
+    toc, statuses = build(tmp)
+    os.remove(tmp)
+    build(out, statuses_in=statuses, toc_in=toc)
+    print(f"Wrote {out}\n")
+    return statuses
+
+
+def season_start_date(today: dt.date, mmdd: str = "10-23") -> dt.date:
+    """Start of the current season: the most recent MM-DD on or before today."""
+    m, d = map(int, mmdd.split("-"))
+    start = dt.date(today.year, m, d)
+    return start if start <= today else dt.date(today.year - 1, m, d)
+
+
+def build_season_report(site: Site, start: dt.date, now: dt.datetime, outdir: str,
+                        overrides: dict[str, str] | None = None) -> str:
+    """Season-to-date history report for one area: the NCEI co-op page, every station
+    page and the season's avalanches, from `start` to today. Station data comes only from
+    the saved files in data/ (no scraping), so it can run locally any time; the NCEI page
+    and the avalanche page fetch their season data from NCEI and the UAC. No forecasts.
+    Writes reports/<area>_season_report_<start>_<today>.pdf and returns its path.
+
+    Run it with:  python weather_report.py --season          (all three areas)
+                  python weather_report.py --season --site pc
+    """
+    today = now.date()
+    days = (today - start).days + 1  # calendar days in the season so far, today included
+    period = f"season {start:%b %d} – {today:%b %d %Y}"
+    out = os.path.join(outdir, f"{site.key}_season_report_{start:%Y%m%d}_{today:%Y%m%d}.pdf")
+    sections = []
+    if site.ncei_ghcnd:
+        sections.append(("History: NCEI / HOMR",
+                         lambda r: ncei_section(r, days - 1, site.ncei_ghcnd, site.snow_station,
+                                                saved_only=True)))
+    sections.append((f"History: {site.history_label}",
+                     lambda r: station_section(r, site, None, days, overrides or {},
+                                               saved_only=True, period=period,
+                                               recent_panels=False)))
+    sections.append(("Avalanches this season (UAC)",
+                     lambda r: avalanche_activity_section(
+                         r, days - 1,
+                         title=f"Avalanches This Season ({start:%b %d} – {today:%b %d})",
+                         section="Avalanches this season (UAC)")))
+    ids = "|".join(sid for _, _, sid in site.stations)
+    srcs = ([f"data/obs_<ID>.csv (saved weather.gov station history: {ids})",
+             "data/goes_cloud.csv (saved GOES-18 cloud cover, last 7 days)"]
+            + (["https://www.ncei.noaa.gov/access/homr/api", NCEI_DATA] if site.ncei_ghcnd else [])
+            + [f"{UAC_EXPLORER} (avalanches, {AVY_REGION})"])
+    write_report(site, sections, out, now, f"{site.title} season report",
+                 lambda rep, st: title_page(rep, site, days, st, subtitle="Season history report",
+                                            window=period, sources=srcs))
+    return out
+
+
 def build_report(site: Site, args, overrides: dict[str, str], now: dt.datetime,
                  outdir: str) -> tuple[str, list[tuple[str, str]]]:
     out = os.path.join(outdir, f"{site.file_prefix}_{now:%Y%m%d_%H%M}.pdf")
@@ -2143,35 +2269,8 @@ def build_report(site: Site, args, overrides: dict[str, str], now: dt.datetime,
                      lambda r: station_section(r, site, args.synoptic_token, args.days, overrides)))
     sections.append(("Avalanches past 7 days (UAC)", lambda r: avalanche_activity_section(r)))
 
-    def build(path, statuses_in=None, toc_in=None):
-        statuses = []
-        with PdfPages(path) as pdf:
-            rep = Report(pdf, generated=now, label=f"{site.title} weather report")
-            if toc_in is not None:
-                rep.toc = toc_in
-                rep.save(title_page(rep, site, args.days, statuses_in))
-                rep.toc = []
-            for name, fn in sections:
-                print(f"- [{site.key}] {name} ...", flush=True)
-                try:
-                    statuses.append((name, fn(rep) or "ok"))
-                except Exception as e:
-                    traceback.print_exc()
-                    error_page(rep, name, f"{type(e).__name__}: {e}", section=name)
-                    statuses.append((name, f"failed: {type(e).__name__}"))
-            d = pdf.infodict()
-            d["Title"] = f"{site.title} weather report"
-            d["CreationDate"] = now
-        return rep.toc, statuses
-
-    # Pass 1 collects the contents; pass 2 writes the final file with a title page.
-    # (matplotlib can't insert pages.) HTTP responses are cached, so nothing is
-    # downloaded twice.
-    tmp = out + ".tmp.pdf"
-    toc, statuses = build(tmp)
-    os.remove(tmp)
-    build(out, statuses_in=statuses, toc_in=toc)
-    print(f"Wrote {out}\n")
+    statuses = write_report(site, sections, out, now, f"{site.title} weather report",
+                            lambda rep, st: title_page(rep, site, args.days, st))
     return out, statuses
 
 
@@ -2195,6 +2294,11 @@ def main(argv=None):
     ap.add_argument("--days", type=int, default=30, help="history window in days (default 30)")
     ap.add_argument("--synoptic-token", default=os.environ.get("SYNOPTIC_TOKEN"),
                     help="Synoptic Data API token (or env SYNOPTIC_TOKEN); fallback source only")
+    ap.add_argument("--season", action="store_true",
+                    help="instead of the daily reports, build season-to-date history reports "
+                         "(NCEI, station history, avalanches) from the saved station data")
+    ap.add_argument("--season-start", default="10-23",
+                    help="season start as MM-DD (default 10-23); the most recent one is used")
     ap.add_argument("--stid", action="append", default=[],
                     help="override a station ID, e.g. --stid 'ALTA - BASE=ATB' (repeatable)")
     args = ap.parse_args(argv)
@@ -2203,6 +2307,10 @@ def main(argv=None):
     os.makedirs(args.outdir, exist_ok=True)
     overrides = dict(s.split("=", 1) for s in args.stid)
     sites = list(SITES.values()) if args.site == "all" else [SITES[args.site]]
+
+    if args.season:
+        start = season_start_date(now.date(), args.season_start)
+        return [build_season_report(site, start, now, args.outdir, overrides) for site in sites]
 
     # All reports and both passes share downloads through get()'s cache.
     results = [build_report(site, args, overrides, now, args.outdir) for site in sites]

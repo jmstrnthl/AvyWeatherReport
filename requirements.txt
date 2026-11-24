@@ -5,3 +5,4 @@ pandas==3.0.0
 pillow==12.1.0
 playwright==1.65.2
 requests==2.34.2
+h5py==3.16.0

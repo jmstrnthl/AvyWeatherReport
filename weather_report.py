@@ -138,6 +138,7 @@ class Site:
     stations: list[tuple]       # (display name, elevation ft, station ID) for history
     history_label: str
     ncei_ghcnd: str | None = None  # NCEI co-op station (GHCN-Daily ID) for the NCEI page
+    snow_station: tuple | None = None  # (name, elev ft, ID) whose snow joins the NCEI page
 
 
 SITES = {
@@ -153,7 +154,8 @@ SITES = {
                   ("ALTA - TOP OF COLLINS", 10443, "ALT"),
                   ("ALTA - MOUNT BALDY", 11066, "AMB"),
                   ("LCC - CARDIFF PEAK", 10059, "IFF")],
-        history_label="Alta stations", ncei_ghcnd="USC00420072"),   # ALTA co-op
+        history_label="Alta stations", ncei_ghcnd="USC00420072",   # ALTA co-op
+        snow_station=("ALTA - COLLINS", 9662, "CLN")),
     "pc": Site(
         key="pc", title="Park City & Deer Valley", file_prefix="pc_weather_report",
         points=[Point("PC Base", 6697, 40.6461, -111.498),
@@ -162,7 +164,8 @@ SITES = {
         stations=[("DV - BURNS", 7333, "DVE"),
                   ("DV - EMPIRE PEAK", 9570, "EMPUT")],
         history_label="Park City / Deer Valley stations",
-        ncei_ghcnd="USC00426644"),   # PARK CITY co-op, 6,900 ft
+        ncei_ghcnd="USC00426644",   # PARK CITY co-op, 6,900 ft
+        snow_station=("DV - BURNS", 7333, "DVE")),
     "bcc": Site(
         key="bcc", title="Big Cottonwood Canyon", file_prefix="bcc_weather_report",
         # forecasts and stations in increasing elevation
@@ -174,7 +177,8 @@ SITES = {
                   ("REYNOLDS PEAK", 9400, "REY"),
                   ("SOLITUDE HONEYCOMB PEAK", 10488, "SOLHP")],
         history_label="Big Cottonwood stations",
-        ncei_ghcnd="USC00427846"),   # SILVER LAKE BRIGHTON co-op
+        ncei_ghcnd="USC00427846",   # SILVER LAKE BRIGHTON co-op
+        snow_station=("SPRUCES", 7400, "SPC")),
 }
 
 PAGE = (8.5, 11)  # portrait letter
@@ -1340,8 +1344,25 @@ def direction_chart(ax, daily: pd.DataFrame, title: str, width=0.62):
 
 
 # --------------------------------------------------------------------------- history: NCEI / HOMR
-def ncei_section(rep: Report, days: int, ghcnd: str):
-    # 1) look the station up with the HOMR API (name, elevation, still active?)
+C_COOP_SNOW, C_STN_SNOW = "#2e86ab", "#e07a1f"  # co-op = blue, mesonet station = orange
+
+
+def snow_qc(obs: pd.DataFrame) -> tuple[pd.Series, pd.Series, int, int]:
+    """Station snow depth and 6-h snowfall with sensor spikes removed: depth more than 8 in
+    from its 25-hour running median (catches glitches lasting several hours), and 6-h
+    snowfall above 24 in. Returns (depth, snow6, depth readings removed, snowfall removed)."""
+    depth = obs["depth"].astype(float).copy() if "depth" in obs else pd.Series(dtype=float)
+    snow6 = obs["snow6"].astype(float).copy() if "snow6" in obs else pd.Series(dtype=float)
+    med = depth.rolling(25, center=True, min_periods=6).median()
+    bad_d = (depth - med).abs() > 8
+    bad_s = snow6 > 24
+    depth[bad_d] = np.nan
+    snow6[bad_s] = np.nan
+    return depth, snow6, int(bad_d.sum()), int(bad_s.sum())
+
+
+def ncei_section(rep: Report, days: int, ghcnd: str, snow_station: tuple | None = None):
+    # 1) look the co-op station up with the HOMR API (name, elevation, still active?)
     homr = get(HOMR_SEARCH, params={"qid": f"GHCND:{ghcnd}"}).json()
     stations = homr.get("stationCollection", {}).get("stations", [])
     if not stations:
@@ -1353,49 +1374,91 @@ def ncei_section(rep: Report, days: int, ghcnd: str):
     if st.get("header", {}).get("por", {}).get("endDate") != "Present":
         print(f"  note: HOMR lists {ghcnd} as no longer active", file=sys.stderr)
     name_elev = f"{name} ({int(float(elev)):,} ft)" if elev else name
+    short = name.split(",")[0].title()
 
-    # 2) daily data from the NCEI Access Data Service
+    # 2) daily co-op data from the NCEI Access Data Service
     end = dt.datetime.now(TZ).date()
     start = end - dt.timedelta(days=days)
     data = get(NCEI_DATA, params={
         "dataset": "daily-summaries", "stations": ghcnd, "startDate": start.isoformat(),
         "endDate": end.isoformat(), "dataTypes": "TMAX,TMIN,PRCP,SNOW,SNWD",
         "format": "json", "units": "standard"}).json()
-    if not data:
-        raise RuntimeError(f"NCEI returned no daily data for {ghcnd} since {start}")
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(data) if data else pd.DataFrame({"DATE": []})
     df.index = pd.to_datetime(df["DATE"])
     for c in ["TMAX", "TMIN", "PRCP", "SNOW", "SNWD"]:
         df[c] = pd.to_numeric(df.get(c), errors="coerce")
     df = df.reindex(pd.date_range(start, end, freq="D"))
     daily = pd.DataFrame({"high": df.TMAX, "low": df.TMIN}, index=df.index)
 
-    fig, (a1, a2) = plt.subplots(2, 1, figsize=LAND, sharex=True,
-                                 gridspec_kw=dict(height_ratios=[3, 2], hspace=0.15,
-                                                  left=0.07, right=0.96, top=0.86, bottom=0.08))
-    header(fig, f"{name_elev} — NCEI daily observations, last {days} days",
-           f"Station {ghcnd} (looked up with the HOMR API)  ·  data from the NCEI Access Data "
-           f"Service  ·  NCEI data usually lag a few days to a couple of weeks")
-    candlestick_temp(a1, daily, "Daily temperature (high/low)")
-    a2.bar(df.index, df.SNOW, color=C_COOL, width=0.62, label="New snow (in)")
-    a2.set_ylabel("in"); a2.set_title("Snowfall and snow depth", loc="left", fontsize=10, weight="bold")
-    if df.SNWD.notna().any():
-        a3 = a2.twinx()
-        a3.plot(df.index, df.SNWD, color=C_MEAN, lw=1.5, label="Snow depth (in)")
-        a3.set_ylabel("depth (in)"); a3.grid(False); a3.spines["right"].set_visible(True)
-        h1, l1 = a2.get_legend_handles_labels(); h2, l2 = a3.get_legend_handles_labels()
-        a2.legend(h1 + h2, l1 + l2, loc="upper left", fontsize=7, frameon=False)
-    date_axis(a2)
-    if not (df.SNOW.notna().any() or df.SNWD.notna().any()):
-        a2.text(0.5, 0.5, "No snowfall or snow depth reported to NCEI yet for this window",
-                transform=a2.transAxes, ha="center", va="center", fontsize=9, color=C_MUTED)
+    # 3) the nearby mesonet station's hourly snow depth and 6-hour snowfall (weather.gov)
+    s_depth = s_snow6 = pd.Series(dtype=float)
+    removed, s_label = (0, 0), ""
+    if snow_station:
+        s_name, s_elev, s_id = snow_station
+        s_label = f"{s_name} ({s_elev:,} ft)"
+        try:
+            obs = scrape_wrh([s_id], days).get(s_id)
+            if obs is not None and not obs.empty:
+                obs = obs[obs.index >= pd.Timestamp(start).tz_localize(TZ)]
+                s_depth, s_snow6, *removed = snow_qc(obs)
+                s_depth.index = s_depth.index.tz_localize(None)
+                s_snow6.index = s_snow6.index.tz_localize(None)
+        except Exception as e:
+            print(f"  snow data for {s_name} unavailable: {e}", file=sys.stderr)
+    if not data and s_depth.dropna().empty:
+        raise RuntimeError(f"NCEI returned no daily data for {ghcnd} since {start}")
+
+    fig, (a1, a2, a3) = plt.subplots(3, 1, figsize=LAND, sharex=True,
+                                     gridspec_kw=dict(height_ratios=[2.6, 1.8, 1.8], hspace=0.3,
+                                                      left=0.07, right=0.96, top=0.86, bottom=0.08))
+    header(fig, f"{name_elev}" + (f" + {s_label}" if s_label else "")
+           + f" — last {days} days",
+           f"Co-op {ghcnd}: daily, looked up with the HOMR API, data from the NCEI Access Data "
+           f"Service (lags days to weeks)" + (f"  ·  {snow_station[2]}: hourly, weather.gov"
+                                               if snow_station else ""))
+    candlestick_temp(a1, daily, f"Daily temperature (high/low) — {short} co-op")
+
+    # snowfall: co-op new snow per day (wide bars) + station snowfall per 6 h (narrow bars)
+    a2.bar(df.index + pd.Timedelta(hours=12), df.SNOW, width=0.8, color=C_COOP_SNOW, alpha=0.55,
+           label=f"{short} co-op: new snow per day")
+    s6 = s_snow6.dropna()
+    if len(s6):
+        a2.bar(s6.index - pd.Timedelta(hours=3), s6, width=0.22, color=C_STN_SNOW,
+               label=f"{snow_station[0]}: snowfall per 6 h")
+    a2.set_ylabel("in")
+    a2.set_title("Snowfall", loc="left", fontsize=10, weight="bold")
+    a2.legend(loc="upper left", fontsize=7, frameon=False, ncol=2)
+    top = np.nanmax([df.SNOW.max(skipna=True) if df.SNOW.notna().any() else 0,
+                     s6.max() if len(s6) else 0, 1])
+    a2.set_ylim(0, top * 1.35)
+
+    # snow depth: station hourly line + co-op daily dots
+    if s_depth.notna().any():
+        a3.plot(s_depth.index, s_depth, color=C_STN_SNOW, lw=1.6,
+                label=f"{snow_station[0]} (hourly)")
+    a3.plot(df.index + pd.Timedelta(hours=12), df.SNWD, color=C_COOP_SNOW, lw=0, marker="o", ms=4,
+            label=f"{short} co-op (daily)")
+    a3.set_ylabel("in")
+    a3.set_ylim(bottom=0)
+    a3.set_title("Snow depth", loc="left", fontsize=10, weight="bold")
+    a3.legend(loc="upper left", fontsize=7, frameon=False, ncol=2)
+    date_axis(a3)
+    a3.set_xlim(pd.Timestamp(start), pd.Timestamp(end) + pd.Timedelta(days=1))
+    if not (df.SNOW.notna().any() or df.SNWD.notna().any() or len(s6) or s_depth.notna().any()):
+        a2.text(0.5, 0.5, "No snowfall reported for this window", transform=a2.transAxes,
+                ha="center", va="center", fontsize=9, color=C_MUTED)
+
     parts = []
     for label, cols in (("temperature", ["TMAX", "TMIN"]), ("snow", ["SNOW", "SNWD"])):
         last = df.dropna(subset=cols, how="all").index.max()
         parts.append(f"{label} {last:%b %d}" if pd.notna(last) else f"{label} none")
-    fig.text(0.96, 0.89, "latest NCEI day: " + ", ".join(parts), ha="right", fontsize=8,
-             color=C_MUTED)
-    rep.save(fig, f"History: NCEI {name.split(',')[0].title()} co-op station")
+    note = "latest co-op day: " + ", ".join(parts)
+    if snow_station and s_depth.notna().any():
+        note += f"  ·  {snow_station[0]} depth now {s_depth.dropna().iloc[-1]:.0f} in"
+    if sum(removed):
+        note += f"  ·  sensor spikes removed: {removed[0]} depth, {removed[1]} snowfall"
+    fig.text(0.96, 0.89, note, ha="right", fontsize=7.5, color=C_MUTED)
+    rep.save(fig, f"History: NCEI {short} co-op station")
 
 
 # --------------------------------------------------------------------------- history: Synoptic
@@ -1655,10 +1718,11 @@ def scrape_wrh(stids: list[str], days: int) -> dict[str, pd.DataFrame]:
     """Read the hourly observation table that weather.gov's station timeseries page
     (https://www.weather.gov/wrh/timeseries?site=<ID>) draws in the browser. The table
     is built by JavaScript, so this drives headless Chromium through Playwright.
-    One visit per station per run."""
-    key = (tuple(stids), days)
-    if key in _WRH_CACHE:  # main() builds the PDF twice; scrape only once
-        return _WRH_CACHE[key]
+    One visit per station per run: results are cached per station, so the NCEI page,
+    the station pages and both PDF passes share them."""
+    todo = [s for s in stids if (s, days) not in _WRH_CACHE]
+    if not todo:
+        return {s: _WRH_CACHE[(s, days)] for s in stids if _WRH_CACHE[(s, days)] is not None}
     # Chromium lives in ~/.playwright-browsers rather than Playwright's default
     # %LOCALAPPDATA%\ms-playwright, because new AppData folders created from inside
     # packaged Windows apps get virtualized and are invisible to Task Scheduler.
@@ -1669,23 +1733,27 @@ def scrape_wrh(stids: list[str], days: int) -> dict[str, pd.DataFrame]:
 
     # The page accepts at most 720 hours; asking for more silently returns only 72.
     hours = min(days * 24 + 24, 720)
-    out: dict[str, pd.DataFrame] = {}
     now = dt.datetime.now(TZ)
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(user_agent=HEADERS["User-Agent"])
-        for stid in stids:
-            try:
-                page.goto(f"{WRH_TIMESERIES}?site={stid}&hourly=true&hours={hours}",
-                          wait_until="networkidle", timeout=90_000)
-                page.wait_for_selector("#OBS_DATA tr:nth-child(3)", timeout=60_000)
-                rows = page.evaluate(_TABLE_JS)
-                out[stid] = _parse_wrh_table(rows, now)
-            except Exception as e:
-                print(f"  weather.gov scrape failed for {stid}: {e}", file=sys.stderr)
+        for stid in todo:
+            _WRH_CACHE[(stid, days)] = None
+            for attempt in (1, 2):  # one retry after a short pause
+                try:
+                    page.goto(f"{WRH_TIMESERIES}?site={stid}&hourly=true&hours={hours}",
+                              wait_until="networkidle", timeout=90_000)
+                    page.wait_for_selector("#OBS_DATA tr:nth-child(3)", timeout=60_000)
+                    rows = page.evaluate(_TABLE_JS)
+                    _WRH_CACHE[(stid, days)] = _parse_wrh_table(rows, now)
+                    break
+                except Exception as e:
+                    print(f"  weather.gov scrape failed for {stid} (attempt {attempt}): {e}",
+                          file=sys.stderr)
+                    if attempt == 1:
+                        time.sleep(15)
         browser.close()
-    _WRH_CACHE[key] = out
-    return out
+    return {s: _WRH_CACHE[(s, days)] for s in stids if _WRH_CACHE.get((s, days)) is not None}
 
 
 def _parse_wrh_table(rows: list[list[str]], now: dt.datetime) -> pd.DataFrame:
@@ -1696,6 +1764,7 @@ def _parse_wrh_table(rows: list[list[str]], now: dt.datetime) -> pd.DataFrame:
 
     i_t, i_temp, i_dir, i_spd, i_gst = (col("Date/Time"), col("Temp."), col("Wind Direction"),
                                         col("Wind Speed"), col("Wind Gust"))
+    i_depth, i_snow6 = col("Snow Depth"), col("Snowfall 6 Hour")  # only some stations
     if i_t is None or i_temp is None:
         raise RuntimeError(f"unexpected table columns: {hdr}")
 
@@ -1726,8 +1795,13 @@ def _parse_wrh_table(rows: list[list[str]], now: dt.datetime) -> pd.DataFrame:
         wdir = COMPASS.get(r[i_dir].strip().upper(), np.nan) if i_dir is not None else np.nan
         if r[i_dir].strip().upper() == "VAR" if i_dir is not None else False:
             wdir = np.nan
-        recs.append((ts, num(r[i_temp]), spd, gst, wdir))
-    df = pd.DataFrame(recs, columns=["time", "temp", "wind", "gust", "wdir"]).set_index("time")
+        depth = num(r[i_depth]) if i_depth is not None and i_depth < len(r) else np.nan
+        snow6 = num(r[i_snow6]) if i_snow6 is not None and i_snow6 < len(r) else np.nan
+        recs.append((ts, num(r[i_temp]), spd, gst, wdir, depth, snow6))
+    df = pd.DataFrame(recs, columns=["time", "temp", "wind", "gust", "wdir", "depth",
+                                     "snow6"]).set_index("time")
+    if df[["depth", "snow6"]].isna().all().all():
+        df = df.drop(columns=["depth", "snow6"])  # station doesn't measure snow
     df.index = df.index.tz_localize(TZ, ambiguous="NaT", nonexistent="shift_forward")
     df = df[df.index.notna()]
     return df[~df.index.duplicated()].sort_index()
@@ -1770,6 +1844,166 @@ def fetch_station_obs(stations_cfg: list[tuple], token: str | None, days: int,
     return stations, series, sources
 
 
+# --------------------------------------------------------------------------- GOES cloud cover
+GOES_BUCKET = "https://noaa-goes18.s3.amazonaws.com/"  # NOAA open data on AWS, no key
+GOES_PRODUCT = "ABI-L2-ACMC"   # GOES-18 Clear Sky Mask, CONUS sector, every 5 minutes
+GOES_DAYS = 7                  # cloud cover shown for the last 7 days
+GOES_CACHE = os.path.join(CACHE_DIR, "goes_cloud.csv")
+C_CLOUD = "#7d7d7d"
+_GOES: dict = {}               # this run's result, shared by every report
+
+
+def _station_latlon(stid: str) -> tuple[float, float]:
+    """Station coordinates from the NWS API (api.weather.gov/stations/<id>)."""
+    js = get(f"{NWS_API}/stations/{stid}", headers=NWS_API_HEADERS).json()
+    lon, lat = js["geometry"]["coordinates"][:2]
+    return lat, lon
+
+
+def _goes_xy(lat: float, lon: float, proj: dict) -> tuple[float, float]:
+    """Geodetic lat/lon -> GOES fixed-grid scan angles (radians), per the GOES-R PUG."""
+    r_eq, r_pol = proj["semi_major_axis"], proj["semi_minor_axis"]
+    H = proj["perspective_point_height"] + r_eq
+    lon0 = np.radians(proj["longitude_of_projection_origin"])
+    lat, lon = np.radians(lat), np.radians(lon)
+    e2 = (r_eq ** 2 - r_pol ** 2) / r_eq ** 2
+    phi_c = np.arctan(r_pol ** 2 / r_eq ** 2 * np.tan(lat))
+    rc = r_pol / np.sqrt(1 - e2 * np.cos(phi_c) ** 2)
+    sx = H - rc * np.cos(phi_c) * np.cos(lon - lon0)
+    sy = -rc * np.cos(phi_c) * np.sin(lon - lon0)
+    sz = rc * np.sin(phi_c)
+    return float(np.arcsin(-sy / np.sqrt(sx ** 2 + sy ** 2 + sz ** 2))), float(np.arctan(sz / sx))
+
+
+def _goes_hour(hour: dt.datetime, points: dict[str, tuple[float, float]]) -> dict | None:
+    """Cloud cover (%) at each point from the first Clear Sky Mask file of `hour` (UTC):
+    the share of good-quality pixels flagged cloudy/probably cloudy in the 3x3 block
+    (~6 km) around the point. None if the hour has no file yet or downloads keep failing."""
+    import h5py
+
+    prefix = f"{GOES_PRODUCT}/{hour:%Y}/{hour.timetuple().tm_yday:03d}/{hour:%H}/"
+    for attempt in range(3):
+        try:
+            listing = requests.get(GOES_BUCKET, params={"list-type": "2", "prefix": prefix,
+                                                        "max-keys": "1"}, timeout=60)
+            keys = re.findall(r"<Key>([^<]+)</Key>", listing.text)
+            if not keys:
+                return None
+            raw = requests.get(GOES_BUCKET + keys[0], timeout=120)
+            raw.raise_for_status()
+            with h5py.File(io.BytesIO(raw.content), "r") as f:
+                p = f["goes_imager_projection"].attrs
+                proj = {k: float(np.asarray(p[k]).ravel()[0]) for k in
+                        ("semi_major_axis", "semi_minor_axis", "perspective_point_height",
+                         "longitude_of_projection_origin")}
+                xs, ys = f["x"], f["y"]
+                xo, xsf = float(xs.attrs["add_offset"][0]), float(xs.attrs["scale_factor"][0])
+                yo, ysf = float(ys.attrs["add_offset"][0]), float(ys.attrs["scale_factor"][0])
+                out = {}
+                for sid, (lat, lon) in points.items():
+                    x, y = _goes_xy(lat, lon, proj)
+                    i, j = round((y - yo) / ysf), round((x - xo) / xsf)
+                    b = f["BCM"][i - 1:i + 2, j - 1:j + 2].astype(float)
+                    good = (f["DQF"][i - 1:i + 2, j - 1:j + 2] == 0) & (b != 255)
+                    out[sid] = 100 * b[good].mean() if good.any() else np.nan
+                return out
+        except Exception as e:
+            last = e
+            time.sleep(5 * (attempt + 1))
+    print(f"  GOES {hour:%Y-%m-%d %H}Z failed: {last}", file=sys.stderr)
+    return None
+
+
+def goes_cloud_cover() -> pd.DataFrame:
+    """Hourly GOES-18 cloud cover (%) for every station in every report, last GOES_DAYS
+    days, indexed in local time. Saved hours are kept in data/goes_cloud.csv, so each run
+    only downloads the hours it doesn't have yet (one satellite file per hour)."""
+    if "df" in _GOES:
+        return _GOES["df"]
+    stids = sorted({sid for site in SITES.values() for _, _, sid in site.stations})
+    cache = pd.DataFrame()
+    if os.path.exists(GOES_CACHE):
+        cache = pd.read_csv(GOES_CACHE, index_col=0)
+        cache.index = pd.to_datetime(cache.index, utc=True)
+    now = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+    hours = [now - dt.timedelta(hours=h) for h in range(1, GOES_DAYS * 24 + 1)]
+    new_station = any(s not in cache.columns for s in stids)
+    todo = [h for h in hours if new_station or pd.Timestamp(h) not in cache.index]
+    if todo:
+        points = {}
+        for sid in stids:
+            try:
+                points[sid] = _station_latlon(sid)
+            except Exception as e:
+                print(f"  no coordinates for {sid}: {e}", file=sys.stderr)
+        t0 = time.time()
+        import concurrent.futures as cf
+        rows = {}
+        with cf.ThreadPoolExecutor(8) as ex:
+            for hour, vals in zip(todo, ex.map(lambda h: _goes_hour(h, points), todo)):
+                if vals:
+                    rows[pd.Timestamp(hour)] = vals
+        print(f"  GOES: {len(rows)} of {len(todo)} new hours in {time.time() - t0:.0f}s",
+              file=sys.stderr)
+        if rows:
+            fresh = pd.DataFrame.from_dict(rows, orient="index")
+            cache = fresh.combine_first(cache) if not cache.empty else fresh
+        cutoff = pd.Timestamp(now - dt.timedelta(days=GOES_DAYS + 3))
+        cache = cache[cache.index >= cutoff].sort_index()
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        cache.to_csv(GOES_CACHE)
+    df = cache.copy()
+    if not df.empty:
+        df.index = df.index.tz_convert(TZ)
+        df = df[df.index >= pd.Timestamp(now - dt.timedelta(days=GOES_DAYS)).tz_convert(TZ)]
+    _GOES["df"] = df
+    return df
+
+
+def _cloud_axis(ax):
+    """Right-hand 0-100% cloud axis drawn underneath `ax`'s own data."""
+    ca = ax.twinx()
+    ca.set_zorder(ax.get_zorder() - 1)
+    ax.patch.set_visible(False)
+    ca.set_ylim(0, 115)
+    ca.set_yticks([0, 50, 100], ["0%", "50%", "100%"])
+    ca.tick_params(axis="y", labelsize=6.5, colors=C_CLOUD, length=2)
+    ca.spines["right"].set_visible(True)
+    ca.spines["right"].set_color(C_CLOUD)
+    ca.grid(False)
+    return ca
+
+
+def cloud_bars(ax, cloud: pd.Series):
+    """Daily mean cloud cover as faint gray bars behind the 30-day wind chart (days with
+    at least 12 hourly values)."""
+    c = cloud.dropna()
+    if c.empty:
+        return
+    day = c.index.normalize().tz_localize(None)
+    n = c.groupby(day).size()
+    daily = c.groupby(day).mean()[n >= 12]
+    ca = _cloud_axis(ax)
+    ca.bar(mdates.date2num(daily.index), daily, width=0.8, color=C_CLOUD, alpha=0.2, lw=0)
+    for x, v in zip(mdates.date2num(daily.index), daily):
+        ca.text(x, v + 2, f"{v:.0f}%", ha="center", fontsize=5.5, color=C_CLOUD)
+    ca.set_ylabel("cloud cover", fontsize=7, color=C_CLOUD)
+
+
+def cloud_line(ax, cloud: pd.Series, obs: pd.DataFrame, hours: int = 24):
+    """Hourly cloud cover as a faint gray line behind the 24-hour wind chart."""
+    recent = last_hours(obs, hours)
+    if recent.empty:
+        return
+    c = cloud.dropna()
+    c = c[(c.index >= recent.index.min()) & (c.index <= recent.index.max() + pd.Timedelta(hours=1))]
+    if c.empty:
+        return
+    ca = _cloud_axis(ax)
+    ca.plot(c.index, c, color=C_CLOUD, lw=1.6, alpha=0.3)
+    ca.fill_between(c.index, c, color=C_CLOUD, alpha=0.08, lw=0)
+
+
 def station_section(rep: Report, site: Site, token: str | None, days: int,
                     overrides: dict[str, str]):
     section = f"History: {site.history_label}"
@@ -1780,6 +2014,11 @@ def station_section(rep: Report, site: Site, token: str | None, days: int,
         df["src"] = sources[stid]
     series = {stid: merge_cache(stid, df) for stid, df in series.items()}
     window_start = pd.Timestamp(dt.datetime.now(TZ).date() - dt.timedelta(days=days - 1)).tz_localize(TZ)
+    try:
+        clouds = goes_cloud_cover()
+    except Exception as e:  # cloud cover is extra; never fail the station pages over it
+        print(f"  GOES cloud cover unavailable: {e}", file=sys.stderr)
+        clouds = pd.DataFrame()
 
     first = True
     for s in stations:
@@ -1795,12 +2034,14 @@ def station_section(rep: Report, site: Site, token: str | None, days: int,
         srcs = (", ".join(sorted(obs["src"].dropna().unique())) if "src" in obs
                 else sources.get(s["stid"], "?"))
         t, w, wd = daily_stats(obs, days)
+        cloud = (clouds[s["stid"]] if s["stid"] in clouds and clouds[s["stid"]].notna().any()
+                 else None)
 
         # left column: 30-day daily charts (shared date axis)
         # right column: last-24-hour temperature, wind/gust, and the wind rose
         fig = plt.figure(figsize=LAND)
         gs = fig.add_gridspec(3, 2, width_ratios=[3.0, 1.0], height_ratios=[3, 2.5, 2.2],
-                              hspace=0.4, wspace=0.2, left=0.06, right=0.975, top=0.86,
+                              hspace=0.4, wspace=0.24, left=0.06, right=0.955, top=0.86,
                               bottom=0.07)
         a1 = fig.add_subplot(gs[0, 0])
         a2 = fig.add_subplot(gs[1, 0], sharex=a1)
@@ -1812,13 +2053,17 @@ def station_section(rep: Report, site: Site, token: str | None, days: int,
         have = t.high.notna().sum()
         header(fig, f"{title} — last {days} days",
                f"Station {s['stid']}  ·  data: {srcs}  ·  {len(obs):,} observations  ·  "
-               f"{have} of {days} days with data  ·  daily = local calendar day ({TZ.key})")
+               f"{have} of {days} days with data  ·  daily = local calendar day ({TZ.key})"
+               + ("  ·  gray: GOES-18 cloud cover, last 7 days" if cloud is not None else ""))
         if have < days:
             fig.text(0.975, 0.89, "Older days come from saved earlier runs (data/ folder) when "
                                   "a source has less history", ha="right", fontsize=7.5, color=C_WARM)
         candlestick_temp(a1, t, "Daily temperature — box: 25th–75th pct, whiskers: low/high, "
                                 "color: steepest 2-h warming")
-        wind_chart(a2, w, "Daily wind speed")
+        wind_chart(a2, w, "Daily wind speed" + ("  +  daily mean cloud cover (gray bars, right axis)"
+                                                if cloud is not None else ""))
+        if cloud is not None:
+            cloud_bars(a2, cloud)
         direction_chart(a3, wd, "Daily wind direction")
         date_axis(a3)
         plt.setp(a1.get_xticklabels(), visible=False)
@@ -1827,6 +2072,9 @@ def station_section(rep: Report, site: Site, token: str | None, days: int,
 
         recent_temp_chart(b1, allobs)
         recent_wind_chart(b2, allobs)
+        if cloud is not None:
+            b2.set_title("Wind, gusts + cloud, last 24 h", loc="left", fontsize=9, weight="bold")
+            cloud_line(b2, cloud, allobs)
         hour_axis(b2)
         b1.tick_params(axis="y", labelsize=7)
         plt.setp(b1.get_xticklabels(), visible=False)
@@ -1890,7 +2138,7 @@ def build_report(site: Site, args, overrides: dict[str, str], now: dt.datetime,
                      lambda r: plume_section(r, site.plume_station, site.plume_name, "rrfsqsf")))
     if site.ncei_ghcnd:
         sections.append(("History: NCEI / HOMR",
-                         lambda r: ncei_section(r, args.days, site.ncei_ghcnd)))
+                         lambda r: ncei_section(r, args.days, site.ncei_ghcnd, site.snow_station)))
     sections.append((f"History: {site.history_label}",
                      lambda r: station_section(r, site, args.synoptic_token, args.days, overrides)))
     sections.append(("Avalanches past 7 days (UAC)", lambda r: avalanche_activity_section(r)))

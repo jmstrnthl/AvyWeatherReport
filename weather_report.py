@@ -747,6 +747,130 @@ def avalanche_activity_section(rep: Report, days: int = 7, title: str | None = N
     rep.save(fig, section or f"Avalanches past {days} days (UAC)")
 
 
+HEAT_PROBLEMS = ["New Snow", "Wind Drifted Snow", "Persistent Weak Layer", "Deep Persistent Slab",
+                 "Wet Snow", "Cornice", "Glide", "Normal Caution"]
+HEAT_ASPECTS = ["North", "Northeast", "East", "Southeast", "South", "Southwest", "West", "Northwest"]
+HEAT_BANDS = [(12000, 99999, "12k+"), (11000, 12000, "11–12k"), (10000, 11000, "10–11k"),
+              (9000, 10000, "9–10k"), (8000, 9000, "8–9k"), (7000, 8000, "7–8k"), (0, 7000, "<7k")]
+HEAT_CMAP = LinearSegmentedColormap.from_list(
+    "avy_heat", ["#cde2fb", "#86b6ef", "#3987e5", "#1c5cab", "#0d366b"])
+HEAT_CMAP.set_bad("white")  # weeks with none stay white
+
+
+def avalanche_heatmap_section(rep: Report, start: dt.date):
+    """Weekly avalanche activity since `start`: total per week, then heatmaps by problem
+    (each problem's share of the week's avalanches, count in the cell), by aspect and by
+    1,000-ft elevation band (counts). Weeks are 7-day bins from `start`. Each avalanche
+    counts once per panel (by its first-listed problem)."""
+    end = dt.datetime.now(TZ).date()
+    av, _, end = fetch_avalanches((end - start).days)
+    n_weeks = (end - start).days // 7 + 1
+    week_starts = [start + dt.timedelta(days=7 * i) for i in range(n_weeks)]
+
+    def week_of(a):
+        d = dt.datetime.strptime(str(a["date"]), "%Y%m%d").date()
+        return min(max((d - start).days // 7, 0), n_weeks - 1)
+
+    def problem_of(a):
+        probs = [p for p in (a.get("avalancheProblem") or []) if p]
+        if not probs:
+            return "No problem reported"
+        for name in HEAT_PROBLEMS:
+            if name.lower() in probs[0].lower() or probs[0].lower() in name.lower():
+                return name
+        return probs[0]  # a problem name not listed above gets its own row
+
+    def band_of(a):
+        el = a.get("elevation")
+        return next((lbl for lo, hi, lbl in HEAT_BANDS if lo <= el < hi), None) if el else None
+
+    def grid(rows, key):
+        g = pd.DataFrame(0, index=rows, columns=range(n_weeks))
+        for a in av:
+            k = key(a)
+            if k is not None:
+                if k not in g.index:
+                    g.loc[k] = 0
+                g.loc[k, week_of(a)] += 1
+        return g
+
+    extra = sorted({problem_of(a) for a in av} - set(HEAT_PROBLEMS) - {"No problem reported"})
+    prob = grid(HEAT_PROBLEMS + extra + ["No problem reported"], problem_of)
+    asp = grid(HEAT_ASPECTS, lambda a: a.get("aspect") if a.get("aspect") in HEAT_ASPECTS else None)
+    asp.index = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    elev = grid([b[2] for b in HEAT_BANDS], band_of)
+    totals = pd.Series(0, index=range(n_weeks))
+    for a in av:
+        totals[week_of(a)] += 1
+    shares = prob.div(totals.replace(0, np.nan), axis=1) * 100
+    count_max = max(asp.to_numpy().max(), elev.to_numpy().max(), 1)
+
+    def heat(ax, values, counts, title, vmax):
+        data = values.to_numpy(float)
+        im = ax.imshow(np.where(counts.to_numpy() > 0, data, np.nan), aspect="auto", cmap=HEAT_CMAP,
+                       vmin=0, vmax=vmax, interpolation="nearest")
+        for i in range(counts.shape[0]):
+            for j in range(counts.shape[1]):
+                if counts.iat[i, j]:
+                    ax.text(j, i, str(counts.iat[i, j]), ha="center", va="center", fontsize=6.5,
+                            color="white" if data[i, j] > vmax * 0.55 else C_TEXT)
+        ax.set_yticks(range(len(values.index)), values.index, fontsize=7)
+        ax.set_xticks(np.arange(-0.5, n_weeks, 1), minor=True)
+        ax.set_yticks(np.arange(-0.5, len(values.index), 1), minor=True)
+        ax.grid(which="minor", color="#e3e3e3", lw=0.6)
+        ax.grid(which="major", visible=False)
+        ax.tick_params(which="minor", length=0)
+        ax.set_title(title, loc="left", fontsize=9.5, weight="bold")
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        return im
+
+    fig = plt.figure(figsize=PAGE)
+    header(fig, f"Avalanche Activity by Week — {AVY_REGION}",
+           f"{len(av)} avalanches reported to the UAC, {start:%b %d} – {end:%b %d %Y}, in 7-day bins "
+           f"from {start:%b %d}")
+    gs = fig.add_gridspec(4, 2, width_ratios=[40, 1], height_ratios=[1.3, len(prob), 8, len(HEAT_BANDS)],
+                          hspace=0.32, wspace=0.03, left=0.2, right=0.9, top=0.89, bottom=0.07)
+    ax0 = fig.add_subplot(gs[0, 0])
+    ax1 = fig.add_subplot(gs[1, 0], sharex=ax0)
+    ax2 = fig.add_subplot(gs[2, 0], sharex=ax0)
+    ax3 = fig.add_subplot(gs[3, 0], sharex=ax0)
+
+    ax0.bar(range(n_weeks), totals, color="#3987e5", width=0.75)
+    for j, v in totals.items():
+        ax0.text(j, v + max(totals.max(), 1) * 0.05, str(v), ha="center", va="bottom", fontsize=7)
+    ax0.set_ylim(0, max(totals.max(), 1) * 1.35)
+    ax0.set_yticks([])
+    ax0.set_title("Avalanches per week", loc="left", fontsize=9.5, weight="bold")
+    for sp in ("left", "top", "right"):
+        ax0.spines[sp].set_visible(False)
+    ax0.grid(False)
+
+    im1 = heat(ax1, shares, prob, "By problem — share of the week's avalanches (count in cell)", 100)
+    im2 = heat(ax2, asp, asp, "By aspect — avalanches", count_max)
+    heat(ax3, elev, elev, "By elevation band — avalanches", count_max)
+
+    labels = []
+    for ws in week_starts:
+        we = min(ws + dt.timedelta(days=6), end)
+        labels.append(f"{ws:%b %d}\n–{we:%b %d}" + ("\n(so far)" if we < ws + dt.timedelta(days=6) else ""))
+    # with many weeks, label every other one so the dates stay readable
+    step = 1 if n_weeks <= 12 else 2
+    ax3.set_xticks(range(0, n_weeks, step), labels[::step], fontsize=6.8 if n_weeks <= 12 else 6)
+    for a in (ax0, ax1, ax2):
+        plt.setp(a.get_xticklabels(), visible=False)
+        a.tick_params(axis="x", length=0)
+
+    for spec, im, lbl in ((gs[1, 1], im1, "% of week"), (gs[2:, 1], im2, "avalanches")):
+        cb = fig.colorbar(im, cax=fig.add_subplot(spec))
+        cb.set_label(lbl, fontsize=7)
+        cb.ax.tick_params(labelsize=6.5)
+        cb.outline.set_linewidth(0.4)
+    fig.text(0.2, 0.025, "Each avalanche counts once per panel: by its first-listed problem, its aspect "
+             "and its elevation. White = none that week.", fontsize=7, color=C_MUTED)
+    rep.save(fig, "Avalanche activity by week (UAC)")
+
+
 # --------------------------------------------------------------------------- forecast: AFD
 def afd_section(rep: Report):
     s = soup_of(AFD_URL)
@@ -2236,6 +2360,8 @@ def build_season_report(site: Site, start: dt.date, now: dt.datetime, outdir: st
                          r, days - 1,
                          title=f"Avalanches This Season ({start:%b %d} – {today:%b %d})",
                          section="Avalanches this season (UAC)")))
+    sections.append(("Avalanche activity by week (UAC)",
+                     lambda r: avalanche_heatmap_section(r, start)))
     ids = "|".join(sid for _, _, sid in site.stations)
     srcs = ([f"data/obs_<ID>.csv (saved weather.gov station history: {ids})",
              "data/goes_cloud.csv (saved GOES-18 cloud cover, last 7 days)"]

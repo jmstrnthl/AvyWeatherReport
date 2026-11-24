@@ -47,13 +47,14 @@ History sections:
         python -m playwright install chromium-headless-shell
     (the script uses ~/.playwright-browsers automatically when it exists)
 
-Usage:
-    python weather_report.py                 # both reports, into reports/
-    python weather_report.py --site pc       # just Park City (or --site alta)
-    python weather_report.py --days 30 --outdir somewhere
+Usage (see README.md for every option):
+    python weather_report.py                 # all three daily reports, into reports/
+    python weather_report.py --site pc       # just one area (alta, pc or bcc)
+    python weather_report.py --season        # season history reports from saved data
     $env:SYNOPTIC_TOKEN = "xxxx"             # optional fallback data source
 
-Requirements: requests, beautifulsoup4, pandas, numpy, matplotlib, pillow
+Requirements: see requirements.txt (requests, beautifulsoup4, pandas, numpy, matplotlib,
+pillow, playwright, h5py)
 """
 
 from __future__ import annotations

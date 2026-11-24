@@ -1,0 +1,459 @@
+id,url,aspect,date,elevation,lat,lng,observerName,has_photo,has_video,snow_profile,primaryAvalancheProblem,avalancheProblem,region,roles,redFlags
+96771,https://utahavalanchecenter.org/observation/96771,,20250512,Unknown,40.587839134886,-111.6608066797,CB,1,0,0,,Array,"Suicide Chute ""Shane's Chute""",Public,Array
+96625,https://utahavalanchecenter.org/observation/96625,North,20250419,10400,40.53091427541,-111.72173573968,Kelly,0,0,1,,Array,"Little Cottonwood Canyon","UAC Staff",Array
+96601,https://utahavalanchecenter.org/observation/96601,,20250418,Unknown,40.541512261881,-111.66978671548,Brackelsberg,0,0,0,"New Snow",Array,"Red Baldy","UAC Staff",Array
+96600,https://utahavalanchecenter.org/observation/96600,,20250418,Unknown,40.601330164826,-111.55980541704,ZSmith,1,0,0,"New Snow",Array,10420,Public,Array
+96588,https://utahavalanchecenter.org/observation/96588,,20250418,Unknown,40.591146970197,-111.60264565942,Gagne/Duvernay,0,0,0,,Array,"Little Cottonwood Canyon","UAC Staff",Array
+96523,https://utahavalanchecenter.org/observation/96523,,20250414,Unknown,40.541439333312,-111.68404920609,CS,0,0,0,,Array,"Lake Peak","Pro Observers",Array
+96471,https://utahavalanchecenter.org/observation/96471,,20250412,Unknown,40.633718698549,-111.66647955177,"S. Mates, M. Hoots",1,0,0,Cornice,Array,"Gods Lawnmower",Public,Array
+96438,https://utahavalanchecenter.org/observation/96438,North,20250412,10000,40.599865916921,-111.61908223627,Kelly,0,0,1,,Array,"Cottonwood Canyons","UAC Staff",Array
+96410,https://utahavalanchecenter.org/observation/96410,Northwest,20250411,10000,40.589046493367,-111.61075665948,"Champion & Talty",0,0,1,"Wet Snow",Array,Microwave,"UAC Staff",Array
+96374,https://utahavalanchecenter.org/observation/96374,,20250410,Unknown,40.534809979425,-111.67783334252,Gagne/Frey,1,0,0,,Array,"White Pine","UAC Staff",Array
+96373,https://utahavalanchecenter.org/observation/96373,,20250410,Unknown,40.541673297746,-111.68424918648,Manship,0,0,0,"Wet Snow",Array,"Lake Peak","Pro Observers",Array
+96326,https://utahavalanchecenter.org/observation/96326,,20250409,Unknown,40.62214464582,-111.56931100997,Hardesty,1,0,0,"Normal Caution",Array,"Mickey Mouse Mine","UAC Staff",Array
+96258,https://utahavalanchecenter.org/observation/96258,,20250407,Unknown,40.532501651273,-111.67886717827,"mark white",1,0,0,,Array,"White Baldy","Pro Observers",Array
+96214,https://utahavalanchecenter.org/observation/96214,,20250406,Unknown,40.594237479114,-111.72061994071,Champion,0,0,0,"Wet Snow",Array,"Salt Lake Twins","UAC Staff",Array
+96210,https://utahavalanchecenter.org/observation/96210,,20250406,Unknown,40.595318194258,-111.653457427,Kelly,0,0,0,"Wet Snow",Array,"Salt Lake","UAC Staff",Array
+96167,https://utahavalanchecenter.org/observation/96167,,20250405,Unknown,40.637285282197,-111.57658461598,"Kelly, Park City Snow Safety",0,0,0,"Wind Drifted Snow",Array,"Park City Ridgeline","UAC Staff",Array
+96130,https://utahavalanchecenter.org/observation/96130,,20250404,Unknown,40.667198292646,-111.7794676065,"Daniel Hadley",1,0,0,"Wet Snow",Array,"Mt Olympus",Public,Array
+96084,https://utahavalanchecenter.org/observation/96084,Southwest,20250403,9700,40.594845685852,-111.64242818353,"Zimmerman-Wall/ AIARE PRO 1",1,0,1,"New Snow",Array,"Cardiff Bowl","Pro Observers",Array
+96078,https://utahavalanchecenter.org/observation/96078,,20250403,Unknown,40.61447775212,-111.69344900757,Gagne/Pease/Johnston,1,0,0,,Array,Santiago,"UAC Staff",Array
+96074,https://utahavalanchecenter.org/observation/96074,,20250403,Unknown,40.597000460011,-111.66367127893,"Kelly, Worthen",0,0,0,"New Snow",Array,"Cardiff Fork","UAC Staff",Array
+95987,https://utahavalanchecenter.org/observation/95987,,20250401,Unknown,40.595704141535,-111.61824806928,Cameron,1,0,0,,Array,"Grizzly Gulch",Public,Array
+95977,https://utahavalanchecenter.org/observation/95977,West,20250401,8900,40.56081630547,-111.67951776978,"George & Mike",1,0,0,,Array,"West Scotties",Public,Array
+95974,https://utahavalanchecenter.org/observation/95974,,20250401,Unknown,40.688978189184,-111.71195356757,"T Diegel, Patterson, P Diegel",1,0,0,,Array,"Porter Fork","Pro Observers",Array
+95972,https://utahavalanchecenter.org/observation/95972,,20250401,Unknown,40.654675681848,-111.62659242151,"Champion & UAC NP Staff",0,0,0,"New Snow",Array,"Salt Lake","UAC Staff",Array
+95961,https://utahavalanchecenter.org/observation/95961,,20250401,Unknown,40.593884365338,-111.61534860131,Gagne/Johnston,1,0,0,"New Snow",Array,"Little Cottonwood Canyon","UAC Staff",Array
+95915,https://utahavalanchecenter.org/observation/95915,,20250331,Unknown,40.594716865632,-111.56273438929,Champion,0,0,0,"Wind Drifted Snow",Array,"Brighton Perimeter","UAC Staff",Array
+95870,https://utahavalanchecenter.org/observation/95870,,20250330,Unknown,40.643126101713,-111.63766458032,"Kelly, Wessler",0,0,0,"New Snow",Array,"Big Cottonwood Canyon","UAC Staff",Array
+95857,https://utahavalanchecenter.org/observation/95857,,20250330,Unknown,40.577311634214,-111.59512474536,PattyPowPow,1,0,0,,Array,"Sunset Peak",Public,Array
+95812,https://utahavalanchecenter.org/observation/95812,,20250329,Unknown,40.532251601742,-111.67920663354,"Kelly, Evatt",0,0,0,"New Snow",Array,"White Pine","UAC Staff",Array
+95805,https://utahavalanchecenter.org/observation/95805,,20250328,Unknown,40.583765221251,-111.58138110636,Meisenheimer,0,0,0,"Wet Snow",Array,"Pioneer Bowl","UAC Staff",Array
+95677,https://utahavalanchecenter.org/observation/95677,,20250326,Unknown,0,0,"John Mletschnig",1,0,0,"Wet Snow",Array,"Mineral Slab","Pro Observers",Array
+95625,https://utahavalanchecenter.org/observation/95625,,20250325,Unknown,40.667598573155,-111.68534605415,"Hardesty. Keeling, Passey",0,0,0,"Wet Snow",Array,"Gobblers Knob","UAC Staff",Array
+95621,https://utahavalanchecenter.org/observation/95621,,20250324,Unknown,40.569586067471,-111.67820348736,ET,1,0,0,"Wet Snow",Array,"Salt Lake",Public,Array
+95590,https://utahavalanchecenter.org/observation/95590,,20250324,Unknown,40.674128696605,-111.67387961062,CStowe,0,0,0,,Array,"Wilson Peak","Pro Observers",Array
+95589,https://utahavalanchecenter.org/observation/95589,,20250324,Unknown,40.647156292549,-111.51178244621,"Hardesty and PCMR avalanche teams",0,0,0,"Wet Snow",Array,"Park City Ski Resort","UAC Staff",Array
+95582,https://utahavalanchecenter.org/observation/95582,,20250324,Unknown,40.688113813829,-111.71173094422,"mark white",1,0,0,,Array,"Porter Fork","Pro Observers",Array
+95572,https://utahavalanchecenter.org/observation/95572,North,20250323,10300,40.392836072404,-112.20007537507,"Clint Hamblin",1,0,0,"Persistent Weak Layer",Array,"Oquirrh Mountains",Public,Array
+95529,https://utahavalanchecenter.org/observation/95529,,20250323,Unknown,40.535697557697,-111.6980409494,"Champion & Wilson & Whitefields & Fuys",0,0,0,,Array,"No Name Baldy","UAC Staff",Array
+95511,https://utahavalanchecenter.org/observation/95511,,20250322,Unknown,40.600088730061,-111.55852785917,Gagne,0,0,0,,Array,10420,"UAC Staff",Array
+95482,https://utahavalanchecenter.org/observation/95482,,20250322,Unknown,40.593428140597,-111.63780405519,"Maxwell Morrill",1,0,0,,Array,"Flagstaff Ridge",Public,Array
+95480,https://utahavalanchecenter.org/observation/95480,,20250322,Unknown,40.561572039718,-111.72643932845,"Lindsey Greer",1,0,0,"Wind Drifted Snow",Array,"Y Couloir",Public,Array
+95479,https://utahavalanchecenter.org/observation/95479,East,20250322,10000,40.583847211209,-111.59599579272,"T. Morrison",1,0,0,"New Snow",Array,"Wolverine Bowl",Public,Array
+95475,https://utahavalanchecenter.org/observation/95475,,20250322,Unknown,40.63303305524,-111.57395525488,"mark white",1,1,0,,Array,"South Monitor Bowl","Pro Observers",Array
+95472,https://utahavalanchecenter.org/observation/95472,,20250322,Unknown,40.589561630075,-111.61041720422,"Miller, Neville",1,0,0,"Wind Drifted Snow",Array,"Little Cottonwood Canyon","Pro Observers",Array
+95461,https://utahavalanchecenter.org/observation/95461,,20250322,Unknown,40.628773598692,-111.66679053219,"Matt K",1,0,0,"New Snow",Array,"Gods Lawnmower",Public,Array
+95452,https://utahavalanchecenter.org/observation/95452,,20250322,Unknown,40.692482031371,-111.70883967872,RT,1,0,0,,Array,"Bowman Fork",Public,Array
+95417,https://utahavalanchecenter.org/observation/95417,Northwest,20250321,9200,40.553442741259,-111.67032702477,Kelly,0,0,0,"Wind Drifted Snow",Array,"White Pine","UAC Staff",Array
+95359,https://utahavalanchecenter.org/observation/95359,,20250320,Unknown,40.668553239731,-111.72396733757,Gagne/Pease/Oliver/Johnston,1,0,0,,Array,Neffs,"UAC Staff",Array
+95355,https://utahavalanchecenter.org/observation/95355,North,20250319,8000,40.615795780293,-111.73842980857,"Donovan / Meisenheimer",1,0,0,,Array,"Broads Fork","UAC Staff",Array
+95321,https://utahavalanchecenter.org/observation/95321,,20250319,Unknown,40.629502356522,-111.69768958003,"Bruce Tremper",0,0,0,,Array,"Mineral Fork","Pro Observers",Array
+95318,https://utahavalanchecenter.org/observation/95318,East,20250319,9400,40.613451744613,-111.66912152764,"Champion & Miller",0,0,0,,Array,"Georges Bowl","UAC Staff",Array
+95311,https://utahavalanchecenter.org/observation/95311,North,20250319,9600,40.663502887515,-111.69697611243,Gagne/Oliver/Johnston/Heilweil,1,1,0,,Array,"Mill Creek Canyon","UAC Staff",Array
+95251,https://utahavalanchecenter.org/observation/95251,Northwest,20250318,9400,40.594536109568,-111.60985543725,Kelly,0,0,0,"New Snow",Array,"Little Cottonwood Canyon","UAC Staff",Array
+95250,https://utahavalanchecenter.org/observation/95250,,20250318,Unknown,40.650228606448,-111.61869599817,Gagne,1,0,0,"Wind Drifted Snow",Array,Cone,"UAC Staff",Array
+95240,https://utahavalanchecenter.org/observation/95240,West,20250318,8900,40.652780206411,-111.61831228645,Leydet/Corcoran,0,0,1,"Wind Drifted Snow",Array,"Powder Park",Public,Array
+95234,https://utahavalanchecenter.org/observation/95234,,20250318,Unknown,40.608141854894,-111.64364977391,MAC,0,0,0,"Wind Drifted Snow",Array,"Days Draw",Public,Array
+95201,https://utahavalanchecenter.org/observation/95201,,20250317,Unknown,40.679981850473,-111.68028204353,CStowe,0,0,0,,Array,"Alexander Basin","Pro Observers",Array
+95199,https://utahavalanchecenter.org/observation/95199,Northeast,20250317,8700,40.560669589642,-111.69356181619,Zimmerman-Wall,1,0,0,"Wind Drifted Snow",Array,"White Pine","Pro Observers",Array
+95196,https://utahavalanchecenter.org/observation/95196,,20250317,Unknown,40.588943908047,-111.60918875249,"b. silb",1,0,0,,Array,"Patsy Marly",Public,Array
+95195,https://utahavalanchecenter.org/observation/95195,North,20250317,9300,40.636566106964,-111.57586648463,"Hardesty and Watson",1,0,0,"Wind Drifted Snow",Array,Monitors,"UAC Staff",Array
+95177,https://utahavalanchecenter.org/observation/95177,,20250317,Unknown,40.649243662397,-111.62293388841,Barnes,1,0,0,Cornice,Array,"Short Swing",Public,Array
+95120,https://utahavalanchecenter.org/observation/95120,,20250316,Unknown,40.60651230614,-111.64478852745,"Champion & Wilson & Whitefields",0,0,0,"Wind Drifted Snow",Array,"Chicken Sh#! Ridge","UAC Staff",Array
+95122,https://utahavalanchecenter.org/observation/95122,Northeast,20250315,8100,40.551612134801,-111.69478877098,"Sam W",1,0,1,"New Snow",Array,"Red Pine",Public,Array
+95115,https://utahavalanchecenter.org/observation/95115,,20250315,Unknown,40.68781655053,-111.71861364837,"Gator and Groovy",0,0,0,"New Snow",Array,"Mill Creek Canyon",Public,Array
+95085,https://utahavalanchecenter.org/observation/95085,South,20250315,9500,40.660619813327,-111.7309731117,Leydet/Nate-Dog,1,0,0,"Wind Drifted Snow",Array,Neffs,Public,Array
+95075,https://utahavalanchecenter.org/observation/95075,,20250315,Unknown,40.651767043688,-111.73903062339,,0,1,0,"New Snow",Array,"Big Cottonwood Canyon",Public,Array
+95068,https://utahavalanchecenter.org/observation/95068,North,20250315,9600,40.678619183851,-111.67150183231,Gagne/Oliver/Heilweil/Johnston/Banov,0,0,0,,Array,"Wilson Glade","UAC Staff",Array
+95020,https://utahavalanchecenter.org/observation/95020,,20250314,Unknown,40.656778742319,-111.63035540493,"Bruce Tremper",0,0,0,"Wind Drifted Snow",Array,"Mill D North","Pro Observers",Array
+95013,https://utahavalanchecenter.org/observation/95013,,20250314,Unknown,40.61648886305,-111.62167711767,"T Diegel, P Diegel, Patterson, Higgins",0,0,0,,Array,Meadows,"Pro Observers",Array
+95007,https://utahavalanchecenter.org/observation/95007,Northeast,20250314,8000,40.737750625674,-111.67259767053,"Champion & Talty",0,0,1,,Array,"Lambs Canyon","UAC Staff",Array
+95004,https://utahavalanchecenter.org/observation/95004,North,20250314,9700,40.595753344041,-111.65135844262,Kelly,0,0,0,"New Snow",Array,"Little Cottonwood Canyon","UAC Staff",Array
+95001,https://utahavalanchecenter.org/observation/95001,,20250314,Unknown,40.517848133666,-111.74825802378,"Van Silver",1,0,0,"New Snow",Array,"Lone Peak",Public,Array
+94982,https://utahavalanchecenter.org/observation/94982,,20250314,Unknown,40.655948287019,-111.63065044793,Collett,0,0,0,"Wind Drifted Snow",Array,"Mill D North","UAC Staff",Array
+94951,https://utahavalanchecenter.org/observation/94951,,20250313,Unknown,40.601444207823,-111.56058862207,Gagne,1,0,0,,Array,10420,"UAC Staff",Array
+94944,https://utahavalanchecenter.org/observation/94944,,20250313,Unknown,40.601488314908,-111.56018881711,"S. Deutschlander, D. Ellis",0,0,0,,Array,10420,"Pro Observers",Array
+94925,https://utahavalanchecenter.org/observation/94925,North,20250312,10000,40.613971460814,-111.64345815179,"Tremper / Meisenheimer",0,1,0,,Array,"Days Draw","UAC Staff",Array
+94899,https://utahavalanchecenter.org/observation/94899,North,20250312,9300,40.601843123696,-111.71330137759,"Hardesty and Manship",1,0,0,"Wind Drifted Snow",Array,"Broads Fork","UAC Staff",Array
+94853,https://utahavalanchecenter.org/observation/94853,North,20250311,8300,0,0,Donovan,1,0,0,,Array,"Stansbury Range","Pro Observers",Array
+94806,https://utahavalanchecenter.org/observation/94806,,20250310,Unknown,40.656578823551,-111.69597296626,CStowe,0,0,0,,Array,"Raymond Peak","Pro Observers",Array
+94754,https://utahavalanchecenter.org/observation/94754,,20250309,Unknown,40.620398326813,-111.62862940343,"Hardesty, Barros, Moyer",1,0,0,"Wet Snow",Array,Meadows,"UAC Staff",Array
+94739,https://utahavalanchecenter.org/observation/94739,,20250309,Unknown,40.684952138352,-111.72182409673,Gagne/Johnston,1,0,0,,Array,"West Porter","UAC Staff",Array
+94732,https://utahavalanchecenter.org/observation/94732,,20250309,Unknown,40.664408273245,-111.69082312495,Hankison,1,0,0,,Array,"Big Cottonwood Canyon",Public,Array
+94685,https://utahavalanchecenter.org/observation/94685,,20250308,Unknown,40.655533945732,-111.64622469457,"Jake Scheuerlein",1,0,0,,Array,"Reynolds Peak",Public,Array
+94683,https://utahavalanchecenter.org/observation/94683,,20250308,Unknown,40.670900935722,-111.6775275707,"Meadows & Culligan",1,0,0,,Array,"Alexander Basin",Public,Array
+94672,https://utahavalanchecenter.org/observation/94672,,20250308,Unknown,40.543054731514,-111.69319703575,"Talty, Coyne, Stevens, G.",0,0,0,"Wind Drifted Snow",Array,"Red Pine","UAC Staff",Array
+94657,https://utahavalanchecenter.org/observation/94657,North,20250308,8700,40.616588559852,-111.69017150398,"Champion & Wilson",0,0,0,,Array,Highline,"UAC Staff",Array
+94616,https://utahavalanchecenter.org/observation/94616,,20250307,Unknown,40.654166779276,-111.66397018939,"Michael B",1,0,0,"New Snow",Array,"Butler Fork",Public,Array
+94615,https://utahavalanchecenter.org/observation/94615,,20250307,Unknown,40.597191901614,-111.63460149763,"S Simonds",0,0,0,,Array,"Emma Ridges",Public,Array
+94610,https://utahavalanchecenter.org/observation/94610,,20250307,Unknown,40.60269797249,-111.62480189115,"Kelly, Hollander, Rensford",0,0,0,"New Snow",Array,"Silver Fork","UAC Staff",Array
+94595,https://utahavalanchecenter.org/observation/94595,,20250307,Unknown,40.632120625529,-111.57744187966,"Derek DeBruin, Dave Leydet",1,0,0,,Array,Willows,"Pro Observers",Array
+94588,https://utahavalanchecenter.org/observation/94588,,20250307,Unknown,40.671438005337,-111.72255113121,Ben,1,0,0,,Array,"West Porter",Public,Array
+94547,https://utahavalanchecenter.org/observation/94547,,20250306,Unknown,40.682097128402,-111.64906933304,"Jack H",1,0,0,"New Snow",Array,"Mill Creek Canyon",Public,Array
+94542,https://utahavalanchecenter.org/observation/94542,,20250306,Unknown,40.678410685476,-111.68453066261,Gagne/Johnston,1,0,0,,Array,"Yellow Jacket","UAC Staff",Array
+94534,https://utahavalanchecenter.org/observation/94534,,20250306,Unknown,40.594419322551,-111.60907744081,"Kelly, Kelly, Miller",0,0,0,"New Snow",Array,"Little Cottonwood Canyon","UAC Staff",Array
+94531,https://utahavalanchecenter.org/observation/94531,North,20250306,9600,40.62010932094,-111.55873774202,"Champion, Collett",1,0,0,"Wind Drifted Snow",Array,"Scotts Backdoor","UAC Staff",Array
+94486,https://utahavalanchecenter.org/observation/94486,,20250305,Unknown,40.686659874235,-111.71075193793,"T Diegel",0,0,0,,Array,"Porter Fork","Pro Observers",Array
+94479,https://utahavalanchecenter.org/observation/94479,Northwest,20250305,8900,40.621749382076,-111.68560101982,"Manship & Collett",1,0,1,"New Snow",Array,"Mineral Fork","Pro Observers",Array
+94478,https://utahavalanchecenter.org/observation/94478,Northeast,20250305,9000,40.661159695247,-111.64382293221,Meisenheimer,1,0,0,,Array,"Reynolds Peak","UAC Staff",Array
+94435,https://utahavalanchecenter.org/observation/94435,North,20250304,9700,0,0,"Malone and AAI Pro 1",1,0,0,"Persistent Weak Layer",Array,"Cardiff Pass","Pro Observers",Array
+94430,https://utahavalanchecenter.org/observation/94430,North,20250304,9400,40.58591613843,-111.58633230837,Hardesty,0,0,1,,Array,"Brighton Perimeter","UAC Staff",Array
+94429,https://utahavalanchecenter.org/observation/94429,,20250304,Unknown,40.591146970197,-111.60865380762,Gagne,1,0,0,,Array,"Little Cottonwood Canyon","UAC Staff",Array
+94384,https://utahavalanchecenter.org/observation/94384,,20250303,Unknown,40.642748040123,-111.57701376942,CStowe,0,0,0,,Array,"Park City Ridgeline","Pro Observers",Array
+94383,https://utahavalanchecenter.org/observation/94383,,20250303,Unknown,40.594446495113,-111.62415697572,Hopkins,1,0,0,,Array,"Grizzly Gulch",Public,Array
+94382,https://utahavalanchecenter.org/observation/94382,,20250303,Unknown,40.603232953945,-111.63215239457,DB,1,0,0,,Array,"Silver Fork",Public,Array
+94333,https://utahavalanchecenter.org/observation/94333,Northwest,20250302,9700,40.613963620054,-111.5601051238,Hardesty,0,0,1,,Array,"Scotts Backdoor","UAC Staff",Array
+94331,https://utahavalanchecenter.org/observation/94331,,20250302,Unknown,40.852517069141,-111.75355194716,Connor,1,0,0,"Wet Snow",Array,"Grandview Peak",Public,Array
+94320,https://utahavalanchecenter.org/observation/94320,,20250302,Unknown,40.618801743923,-111.68399958521,"T Diegel, Team Brackelsberg",1,0,0,,Array,"Mineral Fork","Pro Observers",Array
+94336,https://utahavalanchecenter.org/observation/94336,Northeast,20250301,9900,40.592407802036,-111.6017858556,"Clinton Alden",1,0,0,,Array,"Figure 8 Hill",Public,Array
+94287,https://utahavalanchecenter.org/observation/94287,,20250301,Unknown,40.582363737596,-111.70286371705,CB,1,0,0,,Array,"Tanners Gulch",Public,Array
+94280,https://utahavalanchecenter.org/observation/94280,Southeast,20250301,8900,40.514976428998,-111.75233438011,"Kelly, Evatt, Breen",0,0,1,"Wet Snow",Array,"Lone Peak","UAC Staff",Array
+94250,https://utahavalanchecenter.org/observation/94250,,20250228,Unknown,40.614981358109,-111.69027879235,"Meisenheimer / Leven",1,0,0,,Array,Moonlight,"UAC Staff",Array
+94239,https://utahavalanchecenter.org/observation/94239,,20250228,Unknown,0,0,"mark white",1,0,0,,Array,"Long John Silver","Pro Observers",Array
+94233,https://utahavalanchecenter.org/observation/94233,Northwest,20250228,9900,40.630685739504,-111.58771111964,Kelly,0,0,1,"Persistent Weak Layer",Array,"Cottonwood Canyons","UAC Staff",Array
+94188,https://utahavalanchecenter.org/observation/94188,Southeast,20250227,10000,40.584628911669,-111.60745217798,Gagne,1,0,0,,Array,"Little Cottonwood Canyon","UAC Staff",Array
+94185,https://utahavalanchecenter.org/observation/94185,,20250227,Unknown,40.661159509066,-111.700538086,"T Diegel",1,0,0,,Array,"Raymond Peak","Pro Observers",Array
+94140,https://utahavalanchecenter.org/observation/94140,North,20250226,8000,40.856460640109,-111.66912152764,Meisenheimer,1,1,0,"Normal Caution",Array,"Boiler Hollow","UAC Staff",Array
+94122,https://utahavalanchecenter.org/observation/94122,North,20250226,9400,40.666615873335,-111.6789691022,"Collett, Manship",1,1,0,"Persistent Weak Layer",Array,"Butler Basin","UAC Staff",Array
+94093,https://utahavalanchecenter.org/observation/94093,Northeast,20250225,10000,40.591279082905,-111.60560738364,"Kevin Burkert",1,0,0,"Persistent Weak Layer",Array,"Wolverine Cirque",Public,Array
+94046,https://utahavalanchecenter.org/observation/94046,,20250224,Unknown,40.607404024617,-111.58027319821,B,0,0,0,"Wet Snow",Array,"Brighton Perimeter","Pro Observers",Array
+94043,https://utahavalanchecenter.org/observation/94043,North,20250224,8900,40.544703475573,-111.6753910354,"Collett, Manship",0,0,1,"Persistent Weak Layer",Array,"White Pine","UAC Staff",Array
+94041,https://utahavalanchecenter.org/observation/94041,North,20250224,9500,40.593574784604,-111.61819777785,"Maxwell Morrill",1,0,0,,Array,"Grizzly Gulch",Public,Array
+94040,https://utahavalanchecenter.org/observation/94040,,20250224,Unknown,40.550864694954,-111.67848094018,"mark white, cody hughes",1,0,0,,Array,"White Pine","Pro Observers",Array
+94016,https://utahavalanchecenter.org/observation/94016,Northeast,20250223,9000,40.62866721872,-111.68337532331,"Cam F., Kai B.",0,0,1,"Wet Snow",Array,"Kessler Peak",Public,Array
+93974,https://utahavalanchecenter.org/observation/93974,Northwest,20250223,9200,40.697708934382,-111.59349326161,"Paradis / Brackelsberg",1,0,1,"Wet Snow",Array,"Park City Ridgeline","Pro Observers",Array
+93973,https://utahavalanchecenter.org/observation/93973,Northeast,20250223,10000,40.537443681335,-111.70224144455,SB,1,0,0,"Persistent Weak Layer",Array,"Maybird Gulch",Public,Array
+93970,https://utahavalanchecenter.org/observation/93970,,20250223,Unknown,40.677251219205,-111.68311445624,CStowe,0,0,0,,Array,"Alexander Basin","Pro Observers",Array
+93965,https://utahavalanchecenter.org/observation/93965,North,20250223,8000,40.723355979013,-111.69509588391,"Kelly, Manship",0,0,0,,Array,"Mt Aire","UAC Staff",Array
+93950,https://utahavalanchecenter.org/observation/93950,,20250223,Unknown,40.689497825914,-111.66469572695,"T Diegel, P Diegel",0,0,0,,Array,"Mill Creek Canyon","Pro Observers",Array
+93956,https://utahavalanchecenter.org/observation/93956,Northeast,20250222,9200,40.390936152481,-112.26042623955,"Sean Berry",1,1,0,"Persistent Weak Layer",Array,"Oquirrh Mountains",Public,Array
+93907,https://utahavalanchecenter.org/observation/93907,East,20250222,9400,40.424999449672,-112.39949777113,"Kelly, Worthen",0,0,1,"Wind Drifted Snow",Array,"Stansbury Range","UAC Staff",Array
+93903,https://utahavalanchecenter.org/observation/93903,Northeast,20250222,10100,0,0,"Jack Sierputoski",1,0,0,"Persistent Weak Layer",Array,"Red Pine",Public,Array
+93901,https://utahavalanchecenter.org/observation/93901,,20250222,Unknown,40.369391305008,-112.25547387588,"Talty, Dunphey",1,0,0,"Persistent Weak Layer",Array,"Oquirrh Mountains","UAC Staff",Array
+93836,https://utahavalanchecenter.org/observation/93836,,20250221,Unknown,40.611505004494,-111.71777396113,"Michael B",1,0,0,"New Snow",Array,"Broads Fork",Public,Array
+93828,https://utahavalanchecenter.org/observation/93828,,20250221,Unknown,40.861459145921,-111.69431283471,"Meisenheimer / Sugihara",1,0,0,,Array,"Big Mountain","UAC Staff",Array
+93799,https://utahavalanchecenter.org/observation/93799,,20250221,Unknown,0,0,sledkiller,0,0,0,,Array,"Mill Creek Canyon",Public,Array
+93798,https://utahavalanchecenter.org/observation/93798,,20250221,Unknown,40.646215478893,-111.62663533685,Zimmerman-Wall,1,0,0,"New Snow",Array,"Mill D North","Pro Observers",Array
+93755,https://utahavalanchecenter.org/observation/93755,,20250220,Unknown,40.659075476042,-111.70821993261,Gagne/Garcia/Matthews,0,1,0,,Array,"Main Porter","UAC Staff",Array
+93751,https://utahavalanchecenter.org/observation/93751,Southwest,20250220,9000,40.65326252635,-111.61696581753,"Leydet, Coleman, and Wolfe",0,0,1,,Array,"Powder Park",Public,Array
+93748,https://utahavalanchecenter.org/observation/93748,West,20250220,8400,40.64911781337,-111.62346212776,"BC 101 Course",0,0,1,"New Snow",Array,"Powder Park",Public,Array
+93747,https://utahavalanchecenter.org/observation/93747,Southwest,20250220,9200,40.635385054466,-111.58627195867,CJH,1,0,1,,Array,Willows,Public,Array
+93743,https://utahavalanchecenter.org/observation/93743,,20250220,Unknown,40.652014611748,-111.60351588043,"Chimichanga Chaser",0,0,0,,Array,"Bear Trap",Public,Array
+93701,https://utahavalanchecenter.org/observation/93701,,20250219,Unknown,40.651856903799,-111.62019251499,Chilly_ÖL,1,0,0,"Persistent Weak Layer",Array,"Powder Park",Public,Array
+93697,https://utahavalanchecenter.org/observation/93697,,20250219,Unknown,40.619312256797,-111.62862538012,"Malone, Morgan",1,0,0,"Persistent Weak Layer",Array,"Silver Fork","Pro Observers",Array
+93642,https://utahavalanchecenter.org/observation/93642,,20250218,Unknown,40.601499701889,-111.56054570673,"Champion & Miller",0,0,0,"Persistent Weak Layer",Array,10420,"UAC Staff",Array
+93640,https://utahavalanchecenter.org/observation/93640,,20250218,Unknown,40.653619141767,-111.67424841435,Gagne,1,0,0,,Array,"Reynolds Peak","UAC Staff",Array
+93631,https://utahavalanchecenter.org/observation/93631,West,20250218,10500,40.584368176114,-111.60092904566,"Kelly, Garcia",0,0,1,"Wind Drifted Snow",Array,"Little Cottonwood Canyon","UAC Staff",Array
+93586,https://utahavalanchecenter.org/observation/93586,,20250217,Unknown,40.595847725573,-111.61539151666,"AAI Rec Level 2",1,0,0,"Persistent Weak Layer",Array,"Grizzly Gulch","Pro Observers",Array
+93577,https://utahavalanchecenter.org/observation/93577,Northwest,20250217,9300,0,0,"Leydet and Zacharias",0,0,1,,Array,"Mill Creek/PC ridgeline",Public,Array
+93509,https://utahavalanchecenter.org/observation/93509,,20250216,Unknown,0,0,"Cody Hughes",0,1,0,"Persistent Weak Layer",Array,"Butler Fork","Pro Observers",Array
+93498,https://utahavalanchecenter.org/observation/93498,,20250216,Unknown,40.594029462913,-111.63766661948,Dindy,1,0,0,,Array,"Flagstaff Gully",Public,Array
+93434,https://utahavalanchecenter.org/observation/93434,,20250215,Unknown,40.661909971887,-111.64577558038,"Champion & Talty",0,0,0,,Array,"Reynolds Peak","UAC Staff",Array
+93420,https://utahavalanchecenter.org/observation/93420,North,20250215,8900,40.694426224251,-111.59745290278,Brackelsberg,1,0,1,"Wind Drifted Snow",Array,"Salt Lake","UAC Staff",Array
+93322,https://utahavalanchecenter.org/observation/93322,West,20250214,10000,40.594014714692,-111.60813882348,Kelly,0,0,1,"Persistent Weak Layer",Array,"Little Cottonwood Canyon","UAC Staff",Array
+93313,https://utahavalanchecenter.org/observation/93313,,20250214,Unknown,40.6506043842,-111.65717749508,B,0,0,0,"Persistent Weak Layer",Array,"Big Cottonwood Canyon","Pro Observers",Array
+93304,https://utahavalanchecenter.org/observation/93304,,20250214,Unknown,40.655934483834,-111.6422457933,"GG CM",0,0,0,,Array,"Reynolds Peak",Public,Array
+93253,https://utahavalanchecenter.org/observation/93253,,20250213,Unknown,40.623923169742,-111.63132383821,"Joseph Biron",1,0,0,"Wind Drifted Snow",Array,"Greens Basin",Public,Array
+93251,https://utahavalanchecenter.org/observation/93251,,20250213,Unknown,40.629476588563,-111.69542863365,sledkiller,0,0,0,"Wind Drifted Snow",Array,"Mineral Fork",Public,Array
+93249,https://utahavalanchecenter.org/observation/93249,,20250213,Unknown,40.618209788419,-111.69655634672,Gagne/Dechet,1,0,0,"Wind Drifted Snow",Array,"Mineral Fork","UAC Staff",Array
+93190,https://utahavalanchecenter.org/observation/93190,,20250212,Unknown,40.594193944638,-111.61987080571,Hathcock,1,0,0,"Wind Drifted Snow",Array,"Grizzly Gulch",Public,Array
+93187,https://utahavalanchecenter.org/observation/93187,,20250212,Unknown,40.579922529433,-111.70863080171,"Brendan M",0,0,0,"Wind Drifted Snow",Array,"Maybird Chute",Public,Array
+93138,https://utahavalanchecenter.org/observation/93138,,20250211,Unknown,40.692297286361,-111.71409933477,CStowe,0,0,0,,Array,"Mill Creek Canyon","Pro Observers",Array
+93129,https://utahavalanchecenter.org/observation/93129,,20250211,Unknown,40.612186287478,-111.66684701439,"Champion & Talty & Whittaker & Bergstorm",0,0,0,"Persistent Weak Layer",Array,"Georges Bowl","UAC Staff",Array
+93123,https://utahavalanchecenter.org/observation/93123,,20250211,Unknown,40.583295941386,-111.68597384688,"Leydet, Z-dog",1,0,0,,Array,"Little Pine",Public,Array
+93122,https://utahavalanchecenter.org/observation/93122,West,20250211,9600,40.615376422306,-111.64771466166,"Ethel, Fetty, & Pearl",1,0,0,"Persistent Weak Layer",Array,"Benson and Hedges",Public,Array
+93121,https://utahavalanchecenter.org/observation/93121,,20250211,Unknown,40.627140480515,-111.63250117214,"Evan Christensen",0,0,0,,Array,"Days Fork",Public,Array
+93093,https://utahavalanchecenter.org/observation/93093,,20250210,Unknown,40.657797286837,-111.66515036136,"Michael B",1,0,0,"New Snow",Array,"Butler Fork",Public,Array
+93077,https://utahavalanchecenter.org/observation/93077,,20250210,Unknown,40.603440437875,-111.56648948192,Talty,1,0,0,,Array,"Lanes Leap","UAC Staff",Array
+93027,https://utahavalanchecenter.org/observation/93027,Southwest,20250209,8800,40.599928353789,-111.61805479437,"UAC, UMA",0,0,0,"Persistent Weak Layer",Array,"Grizzly Gulch","UAC Staff",Array
+93002,https://utahavalanchecenter.org/observation/93002,,20250209,Unknown,40.706934043952,-111.6918182245,charlie,0,0,0,"Persistent Weak Layer",Array,"Mill Creek Canyon",Public,Array
+92999,https://utahavalanchecenter.org/observation/92999,,20250209,Unknown,40.582052898589,-111.68586516635,Sb,1,0,0,,Array,"Little Pine",Public,Array
+92966,https://utahavalanchecenter.org/observation/92966,,20250208,Unknown,0,0,Connor,1,0,0,,Array,Squaretop,Public,Array
+92959,https://utahavalanchecenter.org/observation/92959,,20250208,Unknown,0,0,T,0,0,0,"New Snow",Array,"Bonanza Flats","Pro Observers",Array
+92949,https://utahavalanchecenter.org/observation/92949,,20250208,Unknown,0,0,"Diegel, Diegel, Patterson, Gregerson, Higgins",0,0,0,,Array,Gobblers,Public,Array
+92942,https://utahavalanchecenter.org/observation/92942,,20250208,Unknown,0,0,CStowe,0,0,0,,Array,"Mt Aire","Pro Observers",Array
+92936,https://utahavalanchecenter.org/observation/92936,North,20250208,9400,0,0,"will hobbs",1,0,0,"New Snow",Array,"Butler Fork",Public,Array
+92928,https://utahavalanchecenter.org/observation/92928,,20250207,Unknown,0,0,"Michael B",1,0,0,,Array,"Mill D North",Public,Array
+92891,https://utahavalanchecenter.org/observation/92891,,20250207,Unknown,40.603198612618,-111.56681939362,"Adam Laurenzo",1,0,0,,Array,10420,Public,Array
+92887,https://utahavalanchecenter.org/observation/92887,,20250207,Unknown,40.613873728007,-111.64311482903,"Meisenheimer / Champion",1,1,0,,Array,"Chicken Sh#! Ridge","UAC Staff",Array
+92884,https://utahavalanchecenter.org/observation/92884,,20250207,Unknown,0,0,Pavlantos,1,0,0,"New Snow",Array,"Big Cottonwood Canyon",Public,Array
+92827,https://utahavalanchecenter.org/observation/92827,,20250206,Unknown,40.618313113788,-111.7224423459,"mark white",1,0,0,,Array,"Broads Fork","Pro Observers",Array
+92823,https://utahavalanchecenter.org/observation/92823,,20250206,Unknown,40.541854696266,-111.67628839013,Gagne/Johnston,1,0,0,,Array,"White Pine","UAC Staff",Array
+92785,https://utahavalanchecenter.org/observation/92785,,20250205,Unknown,40.594674604398,-111.64850070473,"Ben Crawford",1,0,0,,Array,"Cardiff Pass",Public,Array
+92783,https://utahavalanchecenter.org/observation/92783,,20250205,Unknown,40.55892527683,-111.68223216531,"Zimmerman-Wall/ AIARE PRO 2",1,0,0,"Wet Snow",Array,"White Pine","Pro Observers",Array
+92738,https://utahavalanchecenter.org/observation/92738,,20250204,Unknown,40.592971912742,-111.61378219125,"Ben Crawford",1,0,0,,Array,"Patsy Marly",Public,Array
+92726,https://utahavalanchecenter.org/observation/92726,,20250204,Unknown,40.596230614835,-111.62101342676,Gagne,1,0,0,,Array,"Alta Periphery","UAC Staff",Array
+92717,https://utahavalanchecenter.org/observation/92717,,20250204,Unknown,40.628181176324,-111.60264565942,Hardesty,0,0,0,,Array,"Big Cottonwood Canyon","UAC Staff",Array
+92656,https://utahavalanchecenter.org/observation/92656,,20250203,Unknown,40.613808572724,-111.56383409499,B.Williams,0,0,0,"Wind Drifted Snow",Array,"Scotts Backdoor",Public,Array
+92619,https://utahavalanchecenter.org/observation/92619,South,20250202,9400,40.594992326749,-111.64109780786,Lex,1,0,1,"Wind Drifted Snow",Array,"Salt Lake",Public,Array
+92606,https://utahavalanchecenter.org/observation/92606,,20250202,Unknown,40.636822062851,-111.57663344059,Hardesty,0,0,0,"Persistent Weak Layer",Array,Monitors,"UAC Staff",Array
+92576,https://utahavalanchecenter.org/observation/92576,Southeast,20250202,6400,40.593868071651,-111.64478483942,"S Simonds",1,0,1,,Array,"Cardiff Pass",Public,Array
+92536,https://utahavalanchecenter.org/observation/92536,,20250201,Unknown,40.609661223678,-111.64573586198,Stauss,1,0,0,,Array,"Days Fork",Public,Array
+92513,https://utahavalanchecenter.org/observation/92513,,20250201,Unknown,40.637503597481,-111.66083886621,"Champion & Miller & Grandy",0,0,0,,Array,"Kessler Peak","UAC Staff",Array
+92476,https://utahavalanchecenter.org/observation/92476,Northwest,20250131,8000,40.566882315886,-111.69390513894,Kelly,0,1,1,,Array,"Pink Pine","UAC Staff",Array
+92454,https://utahavalanchecenter.org/observation/92454,,20250130,Unknown,40.597396903386,-111.64226038964,,0,0,0,"Wind Drifted Snow",Array,"Suicide Chute ""Shane's Chute""",Public,Array
+92431,https://utahavalanchecenter.org/observation/92431,,20250130,Unknown,40.594607801195,-111.66473397066,"Michael V",1,0,0,"Normal Caution",Array,"Cardiac Bowl",Public,Array
+92426,https://utahavalanchecenter.org/observation/92426,,20250130,Unknown,40.562511665042,-111.67401387689,SB,1,0,0,,Array,"Scotties Bowl",Public,Array
+92424,https://utahavalanchecenter.org/observation/92424,,20250130,Unknown,40.620588453717,-111.64766385552,Gagne/Johnston,1,1,0,,Array,Cardiff/Silver/Days,"UAC Staff",Array
+92407,https://utahavalanchecenter.org/observation/92407,West,20250129,10000,40.600293400173,-111.61787508639,"Talty, Champion",1,0,1,,Array,"Davenport Hill","UAC Staff",Array
+92330,https://utahavalanchecenter.org/observation/92330,North,20250128,10100,40.58756975501,-111.59816100595,"AAI Pro 1",1,0,1,"Wind Drifted Snow",Array,"Brighton Perimeter","Pro Observers",Array
+92329,https://utahavalanchecenter.org/observation/92329,,20250128,Unknown,40.581983313878,-111.58104567441,"Jake Scheuer",1,0,0,,Array,"Brighton Perimeter",Public,Array
+92324,https://utahavalanchecenter.org/observation/92324,,20250128,Unknown,40.613482795352,-111.69021441934,"W. Shirey",0,0,1,"Wind Drifted Snow",Array,"Mineral Fork","Pro Observers",Array
+92306,https://utahavalanchecenter.org/observation/92306,,20250127,Unknown,40.609306455396,-111.64223356755,MAC,0,0,0,,Array,"Days Draw",Public,Array
+92282,https://utahavalanchecenter.org/observation/92282,,20250127,Unknown,40.664630802968,-111.67140393169,CStowe,0,0,0,,Array,"Butler Basin","Pro Observers",Array
+92276,https://utahavalanchecenter.org/observation/92276,,20250127,Unknown,40.634077776504,-111.56297831448,"mark white",1,1,0,,Array,"No Name Bowl","Pro Observers",Array
+92275,https://utahavalanchecenter.org/observation/92275,,20250127,Unknown,40.617791904375,-111.65404467494,"T Diegel",0,0,0,,Array,"Cardiff Fork","Pro Observers",Array
+92258,https://utahavalanchecenter.org/observation/92258,,20250126,Unknown,40.637003909486,-111.66179473845,Grandy/Miller,0,0,0,,Array,"Kessler Peak",Public,Array
+92232,https://utahavalanchecenter.org/observation/92232,West,20250126,9900,40.634464008819,-111.57898573788,"Billy Honey",0,0,1,,Array,Willows,Public,Array
+92228,https://utahavalanchecenter.org/observation/92228,Northeast,20250126,9800,40.639328271661,-111.57697085408,"Michael V",1,0,0,"Wind Drifted Snow",Array,"West Monitor",Public,Array
+92224,https://utahavalanchecenter.org/observation/92224,,20250126,Unknown,40.603286688023,-111.55865743158,"Champion & Talty & Gagne",0,0,0,,Array,10420,"UAC Staff",Array
+92219,https://utahavalanchecenter.org/observation/92219,,20250126,Unknown,40.665380336626,-111.72523032273,PDiegel,0,0,0,"Wind Drifted Snow",Array,Neffs,Public,Array
+92210,https://utahavalanchecenter.org/observation/92210,,20250126,Unknown,40.390977776144,-112.26162686337,"E Primmer",0,0,0,"Persistent Weak Layer",Array,"Oquirrh Mountains",Public,Array
+92167,https://utahavalanchecenter.org/observation/92167,,20250125,Unknown,40.555253937747,-111.70217356295,Gagne/Duvernay,0,0,0,,Array,"Red Pine","UAC Staff",Array
+92135,https://utahavalanchecenter.org/observation/92135,North,20250124,8200,40.568966679617,-111.69208123681,Zimmerman-Wall,1,0,1,"Persistent Weak Layer",Array,"Pink Pine","Pro Observers",Array
+92116,https://utahavalanchecenter.org/observation/92116,,20250124,Unknown,40.65548631337,-111.75493075843,"Grainger, Anderson",1,0,0,,Array,"Thomas Fork","Pro Observers",Array
+92113,https://utahavalanchecenter.org/observation/92113,,20250124,Unknown,0,0,"mark white",1,0,0,,Array,"Butler Fork","Pro Observers",Array
+92061,https://utahavalanchecenter.org/observation/92061,North,20250123,8000,0,0,Gagne,1,0,0,"Persistent Weak Layer",Array,"Mt Aire","UAC Staff",Array
+92013,https://utahavalanchecenter.org/observation/92013,,20250122,Unknown,40.653150792914,-111.61658375857,TBryant,1,0,0,,Array,"Powder Park",Public,Array
+92012,https://utahavalanchecenter.org/observation/92012,Northeast,20250122,7600,40.66890450119,-111.75976394326,Hathcock,1,0,1,"Wind Drifted Snow",Array,"Thomas Fork",Public,Array
+92008,https://utahavalanchecenter.org/observation/92008,,20250122,Unknown,40.539414440447,-111.69457754703,"mark white",1,0,0,,Array,"Red Pine","Pro Observers",Array
+92004,https://utahavalanchecenter.org/observation/92004,North,20250122,8500,40.559635581209,-111.68547882349,"Hankison, Potts",1,0,1,,Array,"White Pine",Public,Array
+92000,https://utahavalanchecenter.org/observation/92000,Northeast,20250122,8800,40.676496630593,-111.65596647771,"Hardesty and Diegel",0,0,1,"Wind Drifted Snow",Array,"Soldier Fork","UAC Staff",Array
+91993,https://utahavalanchecenter.org/observation/91993,,20250122,Unknown,40.66190844591,-111.64533569811,"Steph Coleman",1,0,0,,Array,"Reynolds Peak",Public,Array
+91961,https://utahavalanchecenter.org/observation/91961,,20250121,Unknown,40.618516290247,-111.62783000492,"Jack H",0,1,0,"Persistent Weak Layer",Array,"Upper Meadow Chutes",Public,Array
+91952,https://utahavalanchecenter.org/observation/91952,,20250121,Unknown,0,0,"Joel ORourke",0,0,1,"Wind Drifted Snow",Array,"Salt Lake",Public,Array
+91947,https://utahavalanchecenter.org/observation/91947,,20250121,Unknown,40.649835156611,-111.5876519552,"Davis, Slocum, Fredbo, Dawson",0,0,0,"Wind Drifted Snow",Array,"Park City Ridgeline","Pro Observers",Array
+91962,https://utahavalanchecenter.org/observation/91962,,20250120,Unknown,40.613955172023,-111.67734853324,Dave,0,0,0,,Array,"Mineral Fork",Public,Array
+91915,https://utahavalanchecenter.org/observation/91915,,20250120,Unknown,40.604815719604,-111.64443501284,dindy,1,0,0,,Array,"Big Cottonwood Canyon",Public,Array
+91912,https://utahavalanchecenter.org/observation/91912,,20250120,Unknown,40.661852307186,-111.64549513371,"Billy Honey",1,0,0,,Array,"Reynolds Peak",Public,Array
+91909,https://utahavalanchecenter.org/observation/91909,,20250120,Unknown,40.681240105351,-111.6901525727,CStowe,0,0,0,,Array,"Yellow Jacket","Pro Observers",Array
+91907,https://utahavalanchecenter.org/observation/91907,West,20250120,9600,40.544732706538,-111.6936261892,"Ravi Surdhar",0,0,1,,Array,"Red Pine",Public,Array
+91906,https://utahavalanchecenter.org/observation/91906,,20250120,Unknown,40.638441206614,-111.59382505926,Collette/Pavlantos,0,0,0,"Persistent Weak Layer",Array,Willows,Public,Array
+91861,https://utahavalanchecenter.org/observation/91861,,20250119,Unknown,40.582891657317,-111.58816023382,B,0,0,0,"Wind Drifted Snow",Array,"Big Cottonwood Canyon","Pro Observers",Array
+91857,https://utahavalanchecenter.org/observation/91857,,20250119,Unknown,0,0,"mark white",1,0,0,,Array,"Salt Lake","Pro Observers",Array
+91854,https://utahavalanchecenter.org/observation/91854,South,20250119,10000,40.599446713531,-111.64704008609,Kelly,0,0,1,"Persistent Weak Layer",Array,"Toledo Bowl","UAC Staff",Array
+91841,https://utahavalanchecenter.org/observation/91841,,20250119,Unknown,0,0,Menk,1,0,0,"Persistent Weak Layer",Array,"Upper Days",Public,Array
+91834,https://utahavalanchecenter.org/observation/91834,,20250118,Unknown,0,0,Menk,1,0,0,"Persistent Weak Layer",Array,"Silver Fork",Public,Array
+91806,https://utahavalanchecenter.org/observation/91806,Northwest,20250118,9500,40.564117326583,-111.6789866924,"Pavlantos, Alec Page, Kaitlyn, Michael, Kevin, Ben, Jordan",1,0,1,"New Snow",Array,"West Scotties",Public,Array
+91801,https://utahavalanchecenter.org/observation/91801,Northwest,20250118,8700,40.667377612962,-111.67417197138,Leydet,0,0,1,"Wind Drifted Snow",Array,"Butler Fork",Public,Array
+91759,https://utahavalanchecenter.org/observation/91759,Northwest,20250117,8900,40.603392072892,-111.71514823433,"Trenbeath, White",0,0,0,"Persistent Weak Layer",Array,"Blue Ice","UAC Staff",Array
+91737,https://utahavalanchecenter.org/observation/91737,Northwest,20250117,10100,40.582479722687,-111.58829584119,"Kelly, Grainger, Gagne, Tucker, Webber",1,0,1,"Persistent Weak Layer",Array,"Pioneer Ridge","Pro Observers",Array
+91730,https://utahavalanchecenter.org/observation/91730,,20250116,Unknown,40.599924280737,-111.5595021716,"Ryan Shea",1,0,0,"Persistent Weak Layer",Array,"Snake Creek",Public,Array
+91705,https://utahavalanchecenter.org/observation/91705,Southwest,20250116,9800,40.592294252814,-111.61809368642,Ben,1,0,0,"Normal Caution",Array,Microwave,Public,Array
+91704,https://utahavalanchecenter.org/observation/91704,Southwest,20250116,8100,40.661452499457,-111.62934152993,"Richards, Lambrose",0,0,1,"Persistent Weak Layer",Array,"Mill D North",Public,Array
+91700,https://utahavalanchecenter.org/observation/91700,,20250116,8300,40.734868544824,-111.60428835662,Michael,1,0,1,,Array,"Summit Park",Public,Array
+91693,https://utahavalanchecenter.org/observation/91693,Northwest,20250116,7600,40.659904112055,-111.75152956158,"Manship and Collett",1,0,0,"Wind Drifted Snow",Array,Neffs,"Pro Observers",Array
+91678,https://utahavalanchecenter.org/observation/91678,,20250116,Unknown,40.722288194331,-111.69447477309,"Aaron M",1,0,0,"Persistent Weak Layer",Array,"Mt Aire",Public,Array
+91694,https://utahavalanchecenter.org/observation/91694,Northeast,20250115,9400,40.612635580436,-111.69079630285,Toohey,1,0,1,"Persistent Weak Layer",Array,"Santiago Ridge",Public,Array
+91682,https://utahavalanchecenter.org/observation/91682,Northeast,20250115,8900,40.6215980647,-111.62632136256,"Alec Page",0,0,1,"Persistent Weak Layer",Array,"Greens Basin",Public,Array
+91650,https://utahavalanchecenter.org/observation/91650,,20250115,Unknown,40.61444054587,-111.72151564271,"Champion, Antenucci, Jenson, Conover",0,0,0,"Persistent Weak Layer",Array,"Broads Fork","UAC Staff",Array
+91634,https://utahavalanchecenter.org/observation/91634,North,20250115,10000,40.626176502708,-111.67173835782,"Stephen Rideout",0,0,0,,Array,Argenta,Public,Array
+91624,https://utahavalanchecenter.org/observation/91624,,20250115,Unknown,40.628516275059,-111.57432153224,"Billy Honey",1,0,0,,Array,"USA Bowl",Public,Array
+91629,https://utahavalanchecenter.org/observation/91629,,20250114,Unknown,40.614293948629,-111.64163275273,jh,1,0,0,,Array,"Chicken Sh#! Ridge",Public,Array
+91594,https://utahavalanchecenter.org/observation/91594,Northeast,20250114,8500,40.635893718624,-111.66154696939,"Garrett Harmsen",1,0,1,,Array,"Cardiff Fork",Public,Array
+91593,https://utahavalanchecenter.org/observation/91593,,20250114,Unknown,40.602123485915,-111.66556888418,Dindy,1,0,0,,Array,"Cardiac Bowl",Public,Array
+91584,https://utahavalanchecenter.org/observation/91584,Northwest,20250114,9300,40.667685592607,-111.67617960483,"Hardesty and Pagnucco",1,0,1,"Persistent Weak Layer",Array,"Butler Basin","UAC Staff",Array
+91572,https://utahavalanchecenter.org/observation/91572,South,20250114,8800,40.591302089185,-111.63841946633,Kelly,0,0,1,"Wet Snow",Array,"Atwater Study Plot","UAC Staff",Array
+91563,https://utahavalanchecenter.org/observation/91563,Southeast,20250113,9600,0,0,"S Simonds",1,0,1,,Array,"Toledo Bowl",Public,Array
+91532,https://utahavalanchecenter.org/observation/91532,West,20250113,10200,40.601292558077,-111.6160082689,"Champion & Whitefields",0,0,1,"Persistent Weak Layer",Array,"Grizzly Gulch","UAC Staff",Array
+91529,https://utahavalanchecenter.org/observation/91529,,20250113,Unknown,40.664629514107,-111.6440576255,"Michael V",1,0,0,,Array,"Reynolds Peak",Public,Array
+91534,https://utahavalanchecenter.org/observation/91534,,20250112,Unknown,40.64542226755,-111.57933119801,Kevmo,0,0,0,,Array,"Park City Ridgeline",Public,Array
+91478,https://utahavalanchecenter.org/observation/91478,Northeast,20250112,7800,40.69299382835,-111.61153166206,Paradis,1,0,1,"Persistent Weak Layer",Array,"Park City Ridgeline","Pro Observers",Array
+91476,https://utahavalanchecenter.org/observation/91476,Northeast,20250112,9100,40.662457122099,-111.62963941095,"Manship, Collett, & Meyer",1,0,1,"Wind Drifted Snow",Array,"Mill D North","Pro Observers",Array
+91471,https://utahavalanchecenter.org/observation/91471,,20250112,Unknown,40.598621314994,-111.61541297434,"Derek DeBruin",0,0,0,,Array,"Michigan City","Pro Observers",Array
+91468,https://utahavalanchecenter.org/observation/91468,Southeast,20250112,10200,40.583578138113,-111.59845991643,"Kelly, Wessler",1,0,1,,Array,Tuscarora,"UAC Staff",Array
+91453,https://utahavalanchecenter.org/observation/91453,,20250112,Unknown,40.621975207851,-111.70263691455,Gagne/Johnston,1,1,0,"Persistent Weak Layer",Array,"East Mineral","UAC Staff",Array
+91411,https://utahavalanchecenter.org/observation/91411,,20250111,Unknown,40.73407659431,-111.6698510885,"Talty, Larson, Stevens",1,0,0,"Persistent Weak Layer",Array,"Parleys Canyon","UAC Staff",Array
+91406,https://utahavalanchecenter.org/observation/91406,Northwest,20250111,9200,0,0,"Pavlantos, Prival L1 Tim, Rachael, Drew, Ryder, Matt, Jacob",1,0,0,"Persistent Weak Layer",Array,"Guardsman Pass area",Public,Array
+91404,https://utahavalanchecenter.org/observation/91404,Northeast,20250111,8200,40.925046193344,-111.79094213853,"Daniel Turner",1,1,1,"Wind Drifted Snow",Array,"Bountiful Ridge","Pro Observers",Array
+91390,https://utahavalanchecenter.org/observation/91390,,20250111,Unknown,40.634192701248,-111.56204961007,"Meisenheimer / Wessler / Sparks",0,1,0,"Wind Drifted Snow",Array,"No Name Bowl","UAC Staff",Array
+91363,https://utahavalanchecenter.org/observation/91363,North,20250110,9700,40.547838862148,-111.68686702248,"Bruce Tremper",0,0,0,"New Snow",Array,"White Pine","Pro Observers",Array
+91360,https://utahavalanchecenter.org/observation/91360,,20250110,Unknown,40.619710467372,-111.689376229,"Stephen Rideout",0,0,0,"Persistent Weak Layer",Array,Highline,Public,Array
+91356,https://utahavalanchecenter.org/observation/91356,North,20250110,8400,40.886996876158,-111.76097630173,"Kelly, Thompson, Spencer",0,0,1,"Wind Drifted Snow",Array,"Session Mountains","UAC Staff",Array
+91339,https://utahavalanchecenter.org/observation/91339,,20250110,Unknown,40.589010339128,-111.70658662315,"Grainger, Anderson",1,0,0,,Array,"Tanners Gulch","Pro Observers",Array
+91365,https://utahavalanchecenter.org/observation/91365,,20250109,Unknown,0,0,"Michael Boman",1,0,0,,Array,"Salt Lake",Public,Array
+91310,https://utahavalanchecenter.org/observation/91310,Southeast,20250109,9200,40.57768603973,-111.57759903581,"Ryan Shea",1,0,1,"Persistent Weak Layer",Array,"Pioneer Ridge",Public,Array
+91300,https://utahavalanchecenter.org/observation/91300,,20250109,Unknown,40.662370629415,-111.69873161822,Gagne/Johnston/Pease/Frey,1,0,0,"Persistent Weak Layer",Array,"Raymond Glade","UAC Staff",Array
+91297,https://utahavalanchecenter.org/observation/91297,,20250109,Unknown,40.613882704149,-111.72055407077,"mark white",1,1,0,,Array,"Broads Fork","Pro Observers",Array
+91255,https://utahavalanchecenter.org/observation/91255,,20250108,Unknown,40.664170924014,-111.60014315842,Climaco,1,0,0,,Array,"Park City Ridgeline","Pro Observers",Array
+91249,https://utahavalanchecenter.org/observation/91249,,20250108,Unknown,40.602877874613,-111.55812635419,ZSmith,1,0,0,"Wind Drifted Snow",Array,10420,Public,Array
+91246,https://utahavalanchecenter.org/observation/91246,West,20250108,9300,40.540883255287,-111.66908247979,CJH,1,0,0,,Array,"Columbine Bowl",Public,Array
+91245,https://utahavalanchecenter.org/observation/91245,,20250108,Unknown,40.585003717249,-111.68590679165,CJH,1,0,0,,Array,"Little Pine",Public,Array
+91198,https://utahavalanchecenter.org/observation/91198,,20250107,Unknown,40.614468273001,-111.63832976815,Meisenheimer,1,0,0,"Persistent Weak Layer",Array,"Chicken Sh#! Ridge","UAC Staff",Array
+91193,https://utahavalanchecenter.org/observation/91193,,20250107,Unknown,40.851607140858,-111.75282238632,Manship,1,0,0,,Array,"Grandview Peak","Pro Observers",Array
+91192,https://utahavalanchecenter.org/observation/91192,,20250107,Unknown,40.550310860595,-111.7078129074,Gagne/Johnston,1,1,0,"Persistent Weak Layer",Array,"Maybird Gulch","UAC Staff",Array
+91190,https://utahavalanchecenter.org/observation/91190,,20250107,Unknown,40.667939668771,-111.67773394496,"mark white",1,1,0,,Array,"Butler Basin","Pro Observers",Array
+91168,https://utahavalanchecenter.org/observation/91168,,20250106,Unknown,40.592393476524,-111.62184491155,"S Simonds",1,0,0,,Array,"Grizzly Gulch",Public,Array
+91162,https://utahavalanchecenter.org/observation/91162,Northwest,20250106,8700,40.658799447939,-111.63911297319,"Gehl & Riccomini",0,0,0,,Array,"Mill D North",Public,Array
+91137,https://utahavalanchecenter.org/observation/91137,,20250106,Unknown,40.728824065697,-111.66591479094,CStowe,0,0,0,,Array,"Lambs Canyon","Pro Observers",Array
+91134,https://utahavalanchecenter.org/observation/91134,,20250106,Unknown,40.682880984702,-111.68347671028,"Champion & Gagne",0,0,0,"Persistent Weak Layer",Array,"Yellow Jacket","UAC Staff",Array
+91116,https://utahavalanchecenter.org/observation/91116,,20250105,Unknown,40.733872932385,-111.66938154609,"Garrett the Parrot",0,0,0,"Persistent Weak Layer",Array,"Lambs Canyon",Public,Array
+91084,https://utahavalanchecenter.org/observation/91084,East,20250105,9100,40.632091575221,-111.63685238572,Toohey,0,0,1,,Array,"Days Fork",Public,Array
+91081,https://utahavalanchecenter.org/observation/91081,,20250105,Unknown,40.594649468617,-111.60887091072,Kelly,0,0,0,"Persistent Weak Layer",Array,"Twin Lakes Pass","UAC Staff",Array
+91078,https://utahavalanchecenter.org/observation/91078,,20250105,Unknown,40.62140546969,-111.6952355146,"Meisenheimer / Hardesty",1,1,0,"Persistent Weak Layer",Array,"Mineral Fork","UAC Staff",Array
+91077,https://utahavalanchecenter.org/observation/91077,,20250105,Unknown,40.618025162614,-111.68290926725,"L. Dunn",0,0,0,,Array,"Mineral Fork","Pro Observers",Array
+91075,https://utahavalanchecenter.org/observation/91075,Northwest,20250105,9200,40.669222310994,-111.6502666041,Leydet/Zacharias/Sekiller,1,0,0,"Persistent Weak Layer",Array,"Butler Fork",Public,Array
+91074,https://utahavalanchecenter.org/observation/91074,,20250105,Unknown,40.6686630991,-111.6173066139,"Hayden B, Tomasz S, Josh G, Travis A, Zach O",0,0,0,,Array,"Little Water",Public,Array
+91054,https://utahavalanchecenter.org/observation/91054,,20250104,Unknown,40.634256390145,-111.63741028519,Toohey,1,0,0,,Array,"Days Fork",Public,Array
+91023,https://utahavalanchecenter.org/observation/91023,,20250104,Unknown,40.606184965945,-111.51099994181,Zimmerman-Wall/Brown,1,1,0,"Wind Drifted Snow",Array,"Empire Pass","Pro Observers",Array
+91020,https://utahavalanchecenter.org/observation/91020,,20250104,Unknown,40.721488353094,-111.65899603278,"Robertson and Sterbenz",0,0,0,,Array,"Lambs Canyon",Public,Array
+91017,https://utahavalanchecenter.org/observation/91017,,20250104,Unknown,40.647433043938,-111.61205603393,"Coyne, Hartnett, Oliver",1,0,0,,Array,"Bear Trap","Pro Observers",Array
+91002,https://utahavalanchecenter.org/observation/91002,,20250104,Unknown,40.734643641017,-111.60346105095,"Ryan McFadyen",1,0,0,,Array,"Summit Park",Public,Array
+90970,https://utahavalanchecenter.org/observation/90970,West,20250103,9400,40.62911355096,-111.57169012936,"Bruce Tremper",1,0,0,"Wind Drifted Snow",Array,"Guardsman Pass area","Pro Observers",Array
+90964,https://utahavalanchecenter.org/observation/90964,,20250103,Unknown,40.622147932606,-111.5894277334,"W. Shirey",1,0,0,"Persistent Weak Layer",Array,Willows,"Pro Observers",Array
+90963,https://utahavalanchecenter.org/observation/90963,Northeast,20250103,9200,40.667839471878,-111.65347738774,CStowe,0,0,1,,Array,"Butler Fork","Pro Observers",Array
+90952,https://utahavalanchecenter.org/observation/90952,,20250103,Unknown,40.593550343957,-111.65107562537,"Maxwell Morrill",1,0,0,"Persistent Weak Layer",Array,"Cardiff Bowl",Public,Array
+90951,https://utahavalanchecenter.org/observation/90951,,20250103,Unknown,40.600618824201,-111.64609594852,"Hardesty, Wilson, and Keeling",0,1,0,"Persistent Weak Layer",Array,"Toledo Bowl","UAC Staff",Array
+90941,https://utahavalanchecenter.org/observation/90941,,20250103,Unknown,40.610662532272,-111.67833475978,"mark white",1,1,0,,Array,"Cardiff Fork","Pro Observers",Array
+90938,https://utahavalanchecenter.org/observation/90938,,20250103,Unknown,40.606983204853,-111.57450392244,"Kim Possible",1,0,0,,Array,"Snowboarder Alley (Brad's Run)",Public,Array
+90931,https://utahavalanchecenter.org/observation/90931,Northeast,20250102,9600,40.637248159614,-111.57307966945,"John N",0,0,0,"Persistent Weak Layer",Array,"West Monitor",Public,Array
+90892,https://utahavalanchecenter.org/observation/90892,,20250102,Unknown,40.654412421611,-111.59476532933,"Aaron B",0,0,0,,Array,"Bear Trap",Public,Array
+90875,https://utahavalanchecenter.org/observation/90875,,20250102,Unknown,40.638641688561,-111.59322424443,"Greg Steele",0,0,0,,Array,Willows,"Pro Observers",Array
+90877,https://utahavalanchecenter.org/observation/90877,North,20250101,9800,0,0,"UAC Staff",1,0,1,,Array,"Davenport Hill","UAC Staff",Array
+90841,https://utahavalanchecenter.org/observation/90841,Northeast,20250101,8900,40.686832834416,-111.59984473255,"Paradis / Brackelsberg / Caplis",0,0,1,"Persistent Weak Layer",Array,"Park City Ridgeline","Pro Observers",Array
+90829,https://utahavalanchecenter.org/observation/90829,,20250101,Unknown,40.629806660936,-111.57564047841,"T Diegel",1,0,0,,Array,"Park City Ridgeline","Pro Observers",Array
+90812,https://utahavalanchecenter.org/observation/90812,Northwest,20250101,8000,40.636770622216,-111.49506210002,Hennigh,0,0,1,,Array,"Daly Canyon","Pro Observers",Array
+90804,https://utahavalanchecenter.org/observation/90804,North,20241231,9400,40.643250182423,-111.57838706044,Leydet/Lincoln/Miller,1,0,1,,Array,"Park City Ridgeline",Public,Array
+90803,https://utahavalanchecenter.org/observation/90803,Northeast,20241231,9600,40.645418864056,-111.59665747196,"Collett, Manship, Jeppson",1,1,1,"Persistent Weak Layer",Array,"Salt Lake","UAC Staff",Array
+90773,https://utahavalanchecenter.org/observation/90773,,20241231,Unknown,40.578093920348,-111.59802153109,"Zimmerman-Wall, Kelly",1,0,0,"Persistent Weak Layer",Array,"Alta Periphery","Pro Observers",Array
+90769,https://utahavalanchecenter.org/observation/90769,South,20241231,9400,40.65414381879,-111.60164251325,"Hathcock, Beecher, Pritchett",0,1,0,"Persistent Weak Layer",Array,"Bear Trap",Public,Array
+90687,https://utahavalanchecenter.org/observation/90687,,20241230,Unknown,40.631512183611,-111.58088757989,"John Lemnotis",0,1,0,"Persistent Weak Layer",Array,Willows,"Pro Observers",Array
+90664,https://utahavalanchecenter.org/observation/90664,Northeast,20241230,8900,40.638077043441,-111.57735709217,Paradis,0,0,1,"Persistent Weak Layer",Array,"Park City Ridgeline","Pro Observers",Array
+90656,https://utahavalanchecenter.org/observation/90656,,20241230,Unknown,40.600531858401,-111.6152252197,"M. Hoffman & J. Van Saun",1,0,0,,Array,"Michigan City",Public,Array
+90648,https://utahavalanchecenter.org/observation/90648,Northwest,20241229,9300,40.651400752324,-111.60000100134,"S Simonds, S Donovan",0,0,1,,Array,"Bear Trap",Public,Array
+90601,https://utahavalanchecenter.org/observation/90601,,20241229,Unknown,40.662142751247,-111.64583845648,"Hardesty and Wilson",0,0,0,,Array,"Reynolds Peak","UAC Staff",Array
+90581,https://utahavalanchecenter.org/observation/90581,,20241229,Unknown,40.558983676374,-111.60979895503,"Jacob Scheuerlein",1,0,0,,Array,"Snake Creek",Public,Array
+90572,https://utahavalanchecenter.org/observation/90572,,20241229,Unknown,40.664819253274,-111.70915602357,"Champion & Andrews",0,0,0,"Persistent Weak Layer",Array,"Main Porter","UAC Staff",Array
+90540,https://utahavalanchecenter.org/observation/90540,North,20241228,7800,40.780007272413,-111.48018120441,Fern,1,0,0,,Array,"Tollgate Canyon",Public,Array
+90512,https://utahavalanchecenter.org/observation/90512,,20241228,Unknown,40.618311773116,-111.55824973581,Coyne/Oliver,1,0,0,,Array,"Guardsman Pass area","Pro Observers",Array
+90500,https://utahavalanchecenter.org/observation/90500,,20241228,Unknown,40.674041917896,-111.65737345215,"Kapacinskas & Conigliaro",0,0,0,"Persistent Weak Layer",Array,"Soldier Peak","Pro Observers",Array
+90498,https://utahavalanchecenter.org/observation/90498,,20241228,Unknown,40.606657394205,-111.57402112484,"John Lemnotis",1,0,0,"Persistent Weak Layer",Array,"Brighton Hill","Pro Observers",Array
+90497,https://utahavalanchecenter.org/observation/90497,,20241228,Unknown,40.690680633234,-111.59898642567,Paradis,1,0,0,"Persistent Weak Layer",Array,"Park City Ridgeline","Pro Observers",Array
+90476,https://utahavalanchecenter.org/observation/90476,,20241228,Unknown,40.661371299547,-111.6273648977,Gagne/Duvernay,1,1,0,"Persistent Weak Layer",Array,"Mill D North","UAC Staff",Array
+90465,https://utahavalanchecenter.org/observation/90465,,20241228,Unknown,40.600155935242,-111.55874243589,Ambler,1,0,0,"Persistent Weak Layer",Array,10420,"Pro Observers",Array
+90431,https://utahavalanchecenter.org/observation/90431,,20241227,Unknown,40.660329548818,-111.63521840567,"Evan Hammerman",1,0,0,"Persistent Weak Layer",Array,"Mill D North",Public,Array
+90422,https://utahavalanchecenter.org/observation/90422,Northwest,20241227,9900,40.600058945925,-111.6210079065,"Kelly, Kelly, Champion",0,0,1,"Wind Drifted Snow",Array,"Silver Fork","UAC Staff",Array
+90418,https://utahavalanchecenter.org/observation/90418,Northwest,20241227,9200,40.6571851911,-111.63011400613,Leydet/Lincoln/Milroy,0,0,1,"Persistent Weak Layer",Array,"Mill D North",Public,Array
+90414,https://utahavalanchecenter.org/observation/90414,,20241227,Unknown,40.637493759473,-111.58244969817,Connor,0,0,0,"Wind Drifted Snow",Array,Willows,Public,Array
+90358,https://utahavalanchecenter.org/observation/90358,,20241226,Unknown,40.659418003585,-111.63560464379,Gagne,1,0,0,"Persistent Weak Layer",Array,"Reynolds Peak","UAC Staff",Array
+90332,https://utahavalanchecenter.org/observation/90332,,20241225,Unknown,40.601093932285,-111.65481998918,,1,0,0,"Persistent Weak Layer",Array,"Cardiff Fork",Public,Array
+90299,https://utahavalanchecenter.org/observation/90299,Northwest,20241225,8500,0,0,"Miller, Wieringa",0,0,1,"Persistent Weak Layer",Array,"White Pine","Pro Observers",Array
+90298,https://utahavalanchecenter.org/observation/90298,Northeast,20241225,8900,0,0,Torrey,1,1,0,"Persistent Weak Layer",Array,"Park City Ridgeline","Pro Observers",Array
+90294,https://utahavalanchecenter.org/observation/90294,,20241225,Unknown,40.604520112339,-111.56893565653,"Meisenheimer / Wessler",0,1,0,"Persistent Weak Layer",Array,10420,"UAC Staff",Array
+90253,https://utahavalanchecenter.org/observation/90253,,20241224,Unknown,40.581239270177,-111.59783914087,Gagne,1,0,0,"Persistent Weak Layer",Array,"Catherine's Pass","UAC Staff",Array
+90252,https://utahavalanchecenter.org/observation/90252,,20241224,Unknown,40.548980195471,-111.68592288491,"Evan Hammerman",1,0,0,"Persistent Weak Layer",Array,Spire,Public,Array
+90207,https://utahavalanchecenter.org/observation/90207,South,20241223,8800,40.591126670475,-111.63824780496,"Kelly, Brackelsberg, Talty, Morrison",1,0,1,"Persistent Weak Layer",Array,"Atwater Study Plot","UAC Staff",Array
+90206,https://utahavalanchecenter.org/observation/90206,West,20241223,9600,40.585423193406,-111.58859877499,Hardesty,1,0,1,,Array,"Brighton Perimeter","UAC Staff",Array
+90196,https://utahavalanchecenter.org/observation/90196,Northeast,20241223,8700,40.664594112837,-111.7153467178,"J. Wright",0,0,1,,Array,"The Ice Box",Public,Array
+90163,https://utahavalanchecenter.org/observation/90163,,20241222,Unknown,40.595063355818,-111.64830758568,"Owen Crandall",1,0,0,"Persistent Weak Layer",Array,"Cardiff Pass",Public,Array
+90159,https://utahavalanchecenter.org/observation/90159,,20241222,Unknown,40.549699123575,-111.67281224724,"Champion & Talty",0,0,0,"Persistent Weak Layer",Array,"White Pine","UAC Staff",Array
+90142,https://utahavalanchecenter.org/observation/90142,,20241221,Unknown,40.593134851621,-111.66433646676,"Evan Hammerman",1,0,0,"Wind Drifted Snow",Array,"Cardiac Bowl",Public,Array
+90115,https://utahavalanchecenter.org/observation/90115,,20241221,Unknown,40.601053202452,-111.55938699244,Gagne/Duvernay,1,1,0,"Persistent Weak Layer",Array,10420,"UAC Staff",Array
+90072,https://utahavalanchecenter.org/observation/90072,,20241220,Unknown,0,0,CStowe,0,0,0,,Array,"Cardiff Fork","Pro Observers",Array
+90069,https://utahavalanchecenter.org/observation/90069,,20241220,Unknown,40.603339448689,-111.64180039078,"Meisenheimer / Roxbury",1,0,0,"Persistent Weak Layer",Array,"Upper Days","UAC Staff",Array
+90059,https://utahavalanchecenter.org/observation/90059,Northeast,20241220,9800,0,0,"Richards, Reich",0,0,1,"Persistent Weak Layer",Array,"Red Pine",Public,Array
+90024,https://utahavalanchecenter.org/observation/90024,,20241219,Unknown,40.595804260365,-111.65106138796,,1,0,0,,Array,"Cardiff Pass",Public,Array
+90021,https://utahavalanchecenter.org/observation/90021,,20241219,Unknown,40.599028898497,-111.63800790307,"Kelly, Kelly, Miller",0,0,0,"Persistent Weak Layer",Array,Silver/Days,"UAC Staff",Array
+90020,https://utahavalanchecenter.org/observation/90020,,20241219,Unknown,40.664105817804,-111.7114789724,Gagne/Costa,1,1,0,"Persistent Weak Layer",Array,"Main Porter","UAC Staff",Array
+89981,https://utahavalanchecenter.org/observation/89981,,20241218,Unknown,40.550887809171,-111.67586996552,,0,0,0,,Array,"Tri Chutes",Public,Array
+89975,https://utahavalanchecenter.org/observation/89975,,20241218,Unknown,40.635276435309,-111.56266851933,"mark white",1,0,0,,Array,"No Name Bowl","Pro Observers",Array
+89973,https://utahavalanchecenter.org/observation/89973,Northeast,20241218,9100,40.553890967998,-111.67753293511,Fotter,1,0,0,,Array,"White Pine",Public,Array
+89971,https://utahavalanchecenter.org/observation/89971,West,20241218,9200,40.549461688237,-111.67247279198,"brian bell",0,0,0,,Array,"White Pine",Public,Array
+89969,https://utahavalanchecenter.org/observation/89969,,20241218,Unknown,40.587928061593,-111.60808234127,"photos for wolvy peak obv",1,0,1,,Array,"Wolverine Peak",Public,Array
+89967,https://utahavalanchecenter.org/observation/89967,West,20241218,10100,40.541968840671,-111.67169644829,"W. Shirey",0,0,1,"Persistent Weak Layer",Array,"Red Baldy","Pro Observers",Array
+89965,https://utahavalanchecenter.org/observation/89965,,20241218,Unknown,40.550173153611,-111.67779429466,Ambler,1,0,0,,Array,"White Pine","Pro Observers",Array
+89964,https://utahavalanchecenter.org/observation/89964,North,20241218,9900,40.623170175693,-111.56676843165,Talty,1,0,1,,Array,"Scott Hill","UAC Staff",Array
+89959,https://utahavalanchecenter.org/observation/89959,East,20241218,10700,40.587513275284,-111.60756735714,"Hankison, Werstak",0,0,0,,Array,"Wolverine Peak",Public,Array
+89830,https://utahavalanchecenter.org/observation/89830,,20241216,9200,40.601616612962,-111.57546667965,B,0,0,0,"Persistent Weak Layer",Array,"Brighton Perimeter","Pro Observers",Array
+89812,https://utahavalanchecenter.org/observation/89812,,20241216,7400,40.653094138093,-111.66386290103,CStowe,0,0,0,,Array,"Butler Fork","Pro Observers",Array
+89811,https://utahavalanchecenter.org/observation/89811,Northwest,20241216,10300,40.60074041381,-111.55934325071,"Ben C",1,0,0,,Array,10420,Public,Array
+89808,https://utahavalanchecenter.org/observation/89808,Northeast,20241216,8200,40.66226381162,-111.62981359872,Ambler,1,1,1,"Wind Drifted Snow",Array,"Mill D North","Pro Observers",Array
+89800,https://utahavalanchecenter.org/observation/89800,West,20241216,9300,40.665576541442,-111.60763892678,"Dave Leydet and Nathan Zacharias",0,0,1,"Persistent Weak Layer",Array,"Park City Ridgeline",Public,Array
+89741,https://utahavalanchecenter.org/observation/89741,,20241215,9600,40.619443574531,-111.62875010282,"Malone, Morgan",1,0,0,"Persistent Weak Layer",Array,"Silver Fork","Pro Observers",Array
+89733,https://utahavalanchecenter.org/observation/89733,,20241215,8700,40.60578718384,-111.57924322994,B,0,0,0,"Persistent Weak Layer",Array,"Big Cottonwood Canyon","Pro Observers",Array
+89729,https://utahavalanchecenter.org/observation/89729,,20241215,8200,40.668123045862,-111.7088747886,Carl,1,0,0,,Array,"Porter Fork",Public,Array
+89728,https://utahavalanchecenter.org/observation/89728,,20241215,9200,40.681435373608,-111.68285696418,"Jake Scheuer",1,0,0,,Array,"Alexander Basin",Public,Array
+89725,https://utahavalanchecenter.org/observation/89725,Northwest,20241215,8600,40.619020099359,-111.58097593697,"S Simonds",1,0,1,,Array,"Mill F",Public,Array
+89716,https://utahavalanchecenter.org/observation/89716,North,20241215,9800,0,0,T,1,0,0,"Persistent Weak Layer",Array,"Grizzly Gulch",Public,Array
+89712,https://utahavalanchecenter.org/observation/89712,North,20241215,10000,40.596526249658,-111.65063223451,"Kelly, Richards",0,0,1,"Persistent Weak Layer",Array,"Cardiff Pass","UAC Staff",Array
+89703,https://utahavalanchecenter.org/observation/89703,,20241215,9900,40.595073793775,-111.60882546899,"BC pros rec 1",0,0,0,"Persistent Weak Layer",Array,"Twin Lakes Pass",Public,Array
+89676,https://utahavalanchecenter.org/observation/89676,Northeast,20241214,8900,0,0,Paradis,1,0,1,"Persistent Weak Layer",Array,"Park City Ridgeline","Pro Observers",Array
+89670,https://utahavalanchecenter.org/observation/89670,Northwest,20241214,10000,40.594216093761,-111.60921170709,"brian bell / chris morgan",0,0,1,,Array,"Twin Lakes Pass",Public,Array
+89669,https://utahavalanchecenter.org/observation/89669,,20241214,9900,40.671771637313,-111.68379857537,"Grainger, Kelly",0,1,0,"Persistent Weak Layer",Array,Gobblers,"Pro Observers",Array
+89620,https://utahavalanchecenter.org/observation/89620,North,20241213,9600,40.593035374417,-111.61779730231,"Kelly, Kelly",1,0,1,"Persistent Weak Layer",Array,"Grizzly Gulch","UAC Staff",Array
+89575,https://utahavalanchecenter.org/observation/89575,,20241212,10400,40.586195340598,-111.608825469,Gagne,1,0,0,,Array,Wolverine,"UAC Staff",Array
+89574,https://utahavalanchecenter.org/observation/89574,North,20241212,8500,40.55919560447,-111.68191416771,"G. Miller, C. Dillon",0,0,1,"Persistent Weak Layer",Array,"White Pine",Public,Array
+89572,https://utahavalanchecenter.org/observation/89572,West,20241212,9400,40.613975003703,-111.56053427724,"Kelly, Kelly",1,0,1,"Persistent Weak Layer",Array,"Scotts Backdoor","UAC Staff",Array
+89530,https://utahavalanchecenter.org/observation/89530,North,20241211,9700,40.632097914588,-111.57449319362,Manship,1,1,1,,Array,"Park City Ridgeline","Pro Observers",Array
+89493,https://utahavalanchecenter.org/observation/89493,,20241210,9700,40.613681684572,-111.55853121192,"Hardesty and Nicoll",0,1,0,,Array,"Scotts Bowl","UAC Staff",Array
+89492,https://utahavalanchecenter.org/observation/89492,,20241210,8400,40.617598807884,-111.58748297604,B,0,0,0,"New Snow",Array,"Big Cottonwood Canyon","Pro Observers",Array
+89491,https://utahavalanchecenter.org/observation/89491,,20241210,10400,40.599886650725,-111.66845484286,"mark white",1,1,0,,Array,"Cardiac Ridge","Pro Observers",Array
+89480,https://utahavalanchecenter.org/observation/89480,,20241210,9300,40.610591097319,-111.64115201752,Meisenheimer,0,1,0,"Persistent Weak Layer",Array,"Banana Days","UAC Staff",Array
+89453,https://utahavalanchecenter.org/observation/89453,,20241209,10400,40.575642183613,-111.60198433909,"Addy, Travis, Will",1,0,0,,Array,"Point Supreme","Pro Observers",Array
+89411,https://utahavalanchecenter.org/observation/89411,,20241208,8900,40.610273803364,-111.57233133314,Pavlantos,1,0,0,,Array,"Guardsman Pass area",Public,Array
+89401,https://utahavalanchecenter.org/observation/89401,Northeast,20241208,9800,40.634619722401,-111.57632712393,Paradis,1,0,1,"Persistent Weak Layer",Array,"Park City Ridgeline","Pro Observers",Array
+89412,https://utahavalanchecenter.org/observation/89412,,20241207,9400,40.675694739314,-111.68517186638,"S. Donovan",1,0,0,,Array,Gobblers,"Pro Observers",Array
+89374,https://utahavalanchecenter.org/observation/89374,Northwest,20241207,8900,40.652027785595,-111.61895384515,"Keagan T",1,0,1,"Normal Caution",Array,"Powder Park",Public,Array
+89330,https://utahavalanchecenter.org/observation/89330,,20241206,10000,40.603235777398,-111.72791554924,Grainger,1,0,0,,Array,"Stairs Gulch","Pro Observers",Array
+89329,https://utahavalanchecenter.org/observation/89329,,20241206,9800,40.543747039639,-111.67674286874,"Kelly, Kelly, Pennell",1,1,1,,Array,"White Pine","UAC Staff",Array
+89290,https://utahavalanchecenter.org/observation/89290,,20241205,9900,40.622443618805,-111.56671408681,"Malone, Morgan",1,1,0,"Persistent Weak Layer",Array,"Park City Ridgeline",Public,Array
+89289,https://utahavalanchecenter.org/observation/89289,,20241205,10400,40.588541859893,-111.60848214624,Gagne,1,0,0,,Array,"Grizzly Gulch","UAC Staff",Array
+89288,https://utahavalanchecenter.org/observation/89288,,20241205,10100,40.59833443,-111.61109998224,"John Lemnotis",0,0,1,"Persistent Weak Layer",Array,"Little Cottonwood Canyon","Pro Observers",Array
+89243,https://utahavalanchecenter.org/observation/89243,,20241204,9500,40.674763129769,-111.6706046334,"mark white",1,1,0,,Array,"Wilson Chutes","Pro Observers",Array
+89227,https://utahavalanchecenter.org/observation/89227,North,20241203,9200,40.61009868896,-111.55376508234,Brackelsberg,1,0,1,"Persistent Weak Layer",Array,"Park City Ridgeline","UAC Staff",Array
+89164,https://utahavalanchecenter.org/observation/89164,,20241202,9900,40.594557494818,-111.60904004572,"Champion & Antenucci",0,0,0,,Array,"Twin Lakes Pass","UAC Staff",Array
+89163,https://utahavalanchecenter.org/observation/89163,,20241202,8100,40.664657413102,-111.66171713383,CStowe,0,0,0,,Array,"Butler Fork",Public,Array
+89229,https://utahavalanchecenter.org/observation/89229,North,20241201,9700,40.64940898757,-111.58679846791,"Gabrielle Longchamp",1,0,1,,Array,"Park City Ridgeline",Public,Array
+89115,https://utahavalanchecenter.org/observation/89115,North,20241201,10200,40.600320061219,-111.67374699708,CJH,1,0,1,,Array,"Room of Doom",Public,Array
+89099,https://utahavalanchecenter.org/observation/89099,Northwest,20241201,9800,40.5450183097,-111.68143823144,Zimmerman-Wall,1,0,1,"Persistent Weak Layer",Array,"White Pine","Pro Observers",Array
+89098,https://utahavalanchecenter.org/observation/89098,Northeast,20241130,10600,0,0,CC,1,0,1,"Persistent Weak Layer",Array,"Wolverine Bowl",Public,Array
+89066,https://utahavalanchecenter.org/observation/89066,,20241130,9300,40.692436273007,-111.59964158533,"Grainger, Anderson",1,1,0,"Persistent Weak Layer",Array,"Park City Ridgeline","Pro Observers",Array
+89065,https://utahavalanchecenter.org/observation/89065,,20241130,9600,40.618257310993,-111.55646874903,Gagne,1,0,0,"Persistent Weak Layer",Array,"Park City Ridgeline","UAC Staff",Array
+89024,https://utahavalanchecenter.org/observation/89024,,20241129,9300,40.647615623828,-111.58080174921,"Bruce Tremper",1,0,0,"Persistent Weak Layer",Array,"West Monitor","Pro Observers",Array
+89021,https://utahavalanchecenter.org/observation/89021,,20241129,7200,40.651809082605,-111.66376500042,"mark white",1,0,0,,Array,"Butler Fork","Pro Observers",Array
+89020,https://utahavalanchecenter.org/observation/89020,,20241129,9400,40.645516920369,-111.59794493229,"Hardesty and Wilson",1,0,0,,Array,"West Willow","UAC Staff",Array
+89019,https://utahavalanchecenter.org/observation/89019,North,20241129,8500,40.62927073556,-111.62860608992,"Dave Leydet and Megan Milroy",1,0,1,"Persistent Weak Layer",Array,"Greens Basin",Public,Array
+89007,https://utahavalanchecenter.org/observation/89007,,20241129,9600,40.632964745501,-111.57942845819,"Derek DeBruin",1,0,0,,Array,Willows,"Pro Observers",Array
+89006,https://utahavalanchecenter.org/observation/89006,,20241129,10100,40.599700957915,-111.64247109887,"Grainger, Kelly, Kapacinkas",1,1,0,,Array,Silver/Days,"Pro Observers",Array
+89003,https://utahavalanchecenter.org/observation/89003,North,20241128,8000,40.616968344493,-111.68200804503,"Spencer DrakeUnderkoffler",1,0,1,"Persistent Weak Layer",Array,"Mineral Fork",Public,Array
+88976,https://utahavalanchecenter.org/observation/88976,Northwest,20241128,9200,40.621985064451,-111.57455756662,"Bruce Tremper",0,0,1,,Array,"Scotts Peak","Pro Observers",Array
+88974,https://utahavalanchecenter.org/observation/88974,,20241128,9900,40.632849535779,-111.57672479151,Gagne/Duvernay,1,0,0,"Persistent Weak Layer",Array,"Park City Ridgeline","UAC Staff",Array
+88923,https://utahavalanchecenter.org/observation/88923,Northeast,20241127,10300,40.589449858261,-111.60830496462,Zimmerman-Wall,1,0,1,"New Snow",Array,"Patsy Marly","Pro Observers",Array
+88918,https://utahavalanchecenter.org/observation/88918,,20241127,10400,40.575283623797,-111.60209162745,"Sam Kapacinskas",0,0,0,,Array,"Alta Periphery","Pro Observers",Array
+88917,https://utahavalanchecenter.org/observation/88917,,20241127,9900,40.632883483288,-111.57574776676,"mark white",1,1,0,,Array,Monitors,"Pro Observers",Array
+88915,https://utahavalanchecenter.org/observation/88915,North,20241127,9900,40.629949869949,-111.5701158285,"Talty, Larson",1,0,1,"Persistent Weak Layer",Array,"Park City Ridgeline","UAC Staff",Array
+88913,https://utahavalanchecenter.org/observation/88913,,20241127,9800,40.632345212712,-111.57564047841,B,0,0,0,"New Snow",Array,"Park City Ridgeline","Pro Observers",Array
+88910,https://utahavalanchecenter.org/observation/88910,Northwest,20241127,9600,40.637082017785,-111.57490088938,"Hoffman, Jiricko",1,0,1,"Persistent Weak Layer",Array,Monitors,"Pro Observers",Array
+88907,https://utahavalanchecenter.org/observation/88907,South,20241127,9200,40.63863710903,-111.58671049984,CStowe,0,0,1,,Array,Willows,Public,Array
+88905,https://utahavalanchecenter.org/observation/88905,,20241127,10400,40.577974812771,-111.59795432003,Austin,1,0,0,,Array,"Rocky Point",Public,Array
+88900,https://utahavalanchecenter.org/observation/88900,,20241127,10100,40.600958250934,-111.61645568308,Mark,0,0,0,,Array,"East Bowl",Public,Array
+88864,https://utahavalanchecenter.org/observation/88864,North,20241126,9600,40.596773376972,-111.5685708761,"Champion & Andrews",0,0,1,"Persistent Weak Layer",Array,"Hidden Canyon","UAC Staff",Array
+88848,https://utahavalanchecenter.org/observation/88848,,20241126,8000,40.630007189684,-111.60018591793,B,0,0,0,"New Snow",Array,"Big Cottonwood Canyon","Pro Observers",Array
+88865,https://utahavalanchecenter.org/observation/88865,,20241125,9700,40.613338231134,-111.55844285486,"Champion & Whitefields",0,0,0,,Array,"Scotts Backdoor","UAC Staff",Array
+88822,https://utahavalanchecenter.org/observation/88822,,20241125,10500,40.593863950715,-111.66550307186,"mark white",1,1,0,,Array,"Cardiac Bowl","Pro Observers",Array
+88773,https://utahavalanchecenter.org/observation/88773,,20241124,9500,40.632470213104,-111.57297972706,"mark white",1,1,0,,Array,"South Monitor Bowl","Pro Observers",Array
+88771,https://utahavalanchecenter.org/observation/88771,North,20241124,8100,40.658895032183,-111.62869779976,"Wiehe, Fluegel, Ambler, Noteboom",1,0,1,,Array,"Mill D North","Pro Observers",Array
+88769,https://utahavalanchecenter.org/observation/88769,East,20241124,9800,40.629597708205,-111.5685708761,"Manship & Collett",1,0,1,"Wind Drifted Snow",Array,"Park City Ridgeline","Pro Observers",Array
+88766,https://utahavalanchecenter.org/observation/88766,,20241124,8800,40.671438005336,-111.71996347007,"B & L",1,0,0,,Array,"West Porter",Public,Array
+88761,https://utahavalanchecenter.org/observation/88761,Southeast,20241124,10800,40.560132461261,-111.64487822565,"Kelly, Snowbird Snow Safety",0,0,1,,Array,"Mineral Basin","UAC Staff",Array
+88756,https://utahavalanchecenter.org/observation/88756,,20241124,10300,40.601490073646,-111.55908575864,Hardesty,1,0,0,,Array,10420,"UAC Staff",Array
+88754,https://utahavalanchecenter.org/observation/88754,,20241124,9000,40.60558253055,-111.6547742358,ZL,1,0,0,,Array,"Cardiff Fork","Pro Observers",Array
+88752,https://utahavalanchecenter.org/observation/88752,,20241124,10400,40.588947196465,-111.60899713036,"Sam Kapacinskas",0,0,0,,Array,"Patsy Marly","Pro Observers",Array
+88730,https://utahavalanchecenter.org/observation/88730,Northwest,20241123,9800,0,0,Rochelle,0,0,1,,Array,"Catherine's Pass",Public,Array
+88729,https://utahavalanchecenter.org/observation/88729,North,20241123,10500,0,0,"Keagan T",1,0,1,,Array,"Little Cottonwood Canyon",Public,Array
+88727,https://utahavalanchecenter.org/observation/88727,,20241123,Unknown,0,0,"Sam Kapacinskas",0,1,0,,Array,"Catherine's Pass","Pro Observers",Array
+88715,https://utahavalanchecenter.org/observation/88715,North,20241123,9800,40.544724553708,-111.67328431604,"Grainger, Kelly",1,1,1,"Persistent Weak Layer",Array,"White Pine","Pro Observers",Array
+88698,https://utahavalanchecenter.org/observation/88698,,20241122,9900,40.624250931989,-111.56694009302,"Greg Gagne",1,1,0,,Array,"Park City Ridgeline","UAC Staff",Array
+88696,https://utahavalanchecenter.org/observation/88696,East,20241122,10200,40.591269686926,-111.60828902719,"M. Talty",1,0,1,,Array,"Twin Lakes Pass","UAC Staff",Array
+88670,https://utahavalanchecenter.org/observation/88670,Northwest,20241121,10200,40.579584432258,-111.5984170011,"Kelly, Pagnucco",1,0,1,,Array,"Catherine's Pass","UAC Staff",Array
+88669,https://utahavalanchecenter.org/observation/88669,,20241121,8400,40.619081177673,-111.6376080981,"mark white",1,0,0,,Array,"Cardiff Fork",Public,Array
+88652,https://utahavalanchecenter.org/observation/88652,East,20241120,8700,40.609545853852,-111.65680482385,"Champion & Miller",0,0,1,,Array,"Cardiff Fork","UAC Staff",Array
+88632,https://utahavalanchecenter.org/observation/88632,,20241119,9900,40.600895465448,-111.66600866824,"Mark White",0,1,0,,Array,"Cardiac Ridge","UAC Staff",Array
+88630,https://utahavalanchecenter.org/observation/88630,,20241119,9900,40.601534227152,-111.66583700687,B&E,1,0,0,,Array,"Cardiac Ridge",Public,Array
+88607,https://utahavalanchecenter.org/observation/88607,,20241117,10300,40.464448083574,-112.62861340626,"Bryce Fehlig",0,1,0,,Array,"Deseret Peak",Public,Array
+88581,https://utahavalanchecenter.org/observation/88581,Northwest,20241117,10400,40.577750584798,-111.59934046284,"Will Hobbs",0,0,1,,Array,"Catherine's Pass",Public,Array
+88579,https://utahavalanchecenter.org/observation/88579,,20241117,10000,40.593876218495,-111.608530426,"Ryan Shea",1,0,0,"Persistent Weak Layer",Array,"Patsy Marly",Public,Array
+88578,https://utahavalanchecenter.org/observation/88578,,20241117,10100,40.600742959438,-111.67363955291,"mark white",1,0,0,,Array,"Mineral Fork",Public,Array
+88574,https://utahavalanchecenter.org/observation/88574,,20241117,9800,40.600417813849,-111.63973524569,CJH,1,0,0,,Array,"Two Dogs",Public,Array
+88572,https://utahavalanchecenter.org/observation/88572,North,20241117,10200,40.581348577581,-111.59865839991,mads,1,1,1,"Persistent Weak Layer",Array,"Catherine's Pass",Public,Array
